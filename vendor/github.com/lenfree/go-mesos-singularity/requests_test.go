@@ -36,7 +36,7 @@ func TestNewScheduledRequest(t *testing.T) {
 	expectedID := "test-scheduled"
 	expectedType := "SCHEDULED"
 	expectedCron := "*/30 * * * *"
-	req, _ := NewScheduledRequest(expectedID, expectedCron)
+	req, _ := NewScheduledRequest(expectedID, expectedCron, "CRON")
 	if req.ID != expectedID {
 		t.Errorf("Got %s, expected %s", req.ID, expectedID)
 	}
@@ -49,13 +49,19 @@ func TestNewScheduledRequest(t *testing.T) {
 
 	invalidCron := "* * * * * * *"
 	expectedError := "Parse * * * * * * cron schedule error Expected exactly 5 fields, found 6: * * * * * *"
-	reqError, err := NewScheduledRequest(expectedID, invalidCron)
+	reqError, err := NewScheduledRequest(expectedID, invalidCron, "CRON")
 
 	if err == nil {
 		t.Errorf("Got %v, expected %s", err, expectedError)
 	}
 	if reqError.Schedule != "" {
 		t.Errorf("Got %v, expected %s", err, expectedError)
+	}
+
+	_, err = NewScheduledRequest(expectedID, invalidCron, "quartz")
+
+	if err == nil {
+		t.Errorf("Got %v, expected %s", err, "Only cron scheduleType is allowed.")
 	}
 }
 

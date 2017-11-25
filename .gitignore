@@ -1,2 +1,5 @@
 crash.log
 *.swp
+terraform-provider-singularity
+.terraform
+terraform.tfstate

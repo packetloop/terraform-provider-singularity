@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/parnurzeal/gorequest"
@@ -137,14 +138,18 @@ func (r *RequestService) create(c *Client) (HTTPResponse, error) {
 	}, nil
 }
 
-// NewScheduledRequest accepts a string id, cron schedule format as string
-// This returns a RequestWorker struct which have parameter required to
+// NewScheduledRequest accepts a string id, cron schedule format and scheduleType as string.
+// Only cron is accepted because this is widely know than quartz. This returns a RequestWorker
+// struct which have parameter required to
 // create a SCHEDULED type of Singularity job/task.
-func NewScheduledRequest(id, s string) (*RequestScheduled, error) {
+func NewScheduledRequest(id, s, t string) (*RequestScheduled, error) {
+
+	if strings.ToLower(t) != "cron" {
+		return nil, fmt.Errorf("%v", "Only cron scheduleType is allowed.")
+	}
 	// Singularity Request expects CRON schedule a string. Hence, we just use cron package
 	// to parse and validate this value.
 	_, err := cron.Parse(s)
-
 	if err != nil {
 		return &RequestScheduled{}, fmt.Errorf("Parse %s cron schedule error %v", s, err)
 	}

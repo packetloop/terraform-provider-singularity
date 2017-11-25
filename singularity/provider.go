@@ -12,7 +12,7 @@ func Provider() terraform.ResourceProvider {
 			"host": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("ENDPOINT", nil),
+				DefaultFunc: schema.EnvDefaultFunc("HOST", nil),
 				Description: "The Singularity API endpoint to interface with.",
 			},
 
@@ -32,7 +32,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"singularity_request": resourceServer(),
+			"singularity_request": resourceRequest(),
 		},
 
 		/* DataSources placeholder
