@@ -36,25 +36,26 @@ func (c *Client) GetRequestByID(id string) (HTTPResponse, error) {
 		return HTTPResponse{}, fmt.Errorf("Get Singularity request not found: %v", err)
 	}
 
-	var data Task
+	// Sometimes we don't have a deploy attach to a request. Hence, we do to match.
+	var data Request
 	e := json.Unmarshal([]byte(body), &data)
 
 	if e != nil {
 		return HTTPResponse{}, fmt.Errorf("Parse Singularity request get error: %v", e)
 	}
-
-	response := HTTPResponse{
+	return HTTPResponse{
 		GoRes: res,
-		Task:  data,
-	}
-	return response, nil
+		Body:  data,
+	}, nil
 }
 
 // HTTPResponse contains response and body from a http query.
+// TODO: Move different response type to use interface{} rather
+// than user defined types.
 type HTTPResponse struct {
 	GoRes         gorequest.Response
 	Body          Request
-	Task          Task
+	Task          interface{}
 	Response      SingularityRequest
 	RequestParent SingularityRequestParent
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	singularity "github.com/lenfree/go-singularity"
+	"github.com/mitchellh/mapstructure"
 )
 
 func ExampleCreateRequest() {
@@ -47,8 +48,16 @@ func ExampleClient_GetRequestByID() {
 	client := singularity.New(config)
 	_, r, _ := client.GetRequests()
 
+	// This requestID have a deploy attach to it. Hence,
+	// it can be decode to type Task.
 	resp, _ := client.GetRequestByID(r[0].ID)
-	fmt.Println(resp.Task.ActiveDeploy.ContainerInfo.Docker.Image)
+	val := resp.Task.(map[string]interface{})
+	var result singularity.Task
+	err := mapstructure.Decode(val, &result)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("debug: %+#v\n", result.ActiveDeploy.ContainerInfo.Docker.Image)
 
 	// Output:
 	// golang:latest

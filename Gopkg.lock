@@ -148,7 +148,7 @@
   branch = "master"
   name = "github.com/lenfree/go-mesos-singularity"
   packages = ["."]
-  revision = "7e779d080b1b0794f889c836bcf375b9f2b1659c"
+  revision = "8924f4436e0340fb81b7502f23db87773e878db2"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
