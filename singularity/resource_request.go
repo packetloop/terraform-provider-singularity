@@ -3,6 +3,7 @@ package singularity
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-mesos-singularity"
@@ -28,20 +29,18 @@ func resourceRequest() *schema.Resource {
 			"num_retries_on_failure": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  3,
 			},
 			"schedule": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"schedule_type": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  1,
 			},
 		},
 	}
@@ -75,26 +74,41 @@ func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e err
 }
 
 func createRequest(d *schema.ResourceData, m interface{}) error {
-	id := d.Get("request_id").(string)
+	id := strings.ToLower(d.Get("request_id").(string))
 	numRetriesOnFailure := int64(d.Get("num_retries_on_failure").(int))
 	cronFormat := d.Get("schedule").(string)
-	scheduleType := d.Get("schedule_type").(string)
-	requestType := d.Get("request_type").(string)
+	scheduleType := strings.ToLower(d.Get("schedule_type").(string))
+	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
 
 	d.SetId(id)
 
-	if requestType == "RUN_ONCE" {
+	if requestType == "run_once" {
 		req := singularity.NewRunOnceRequest(id, instances)
 		resp, err := singularity.CreateRequest(clientConn(m), req)
 		return checkResponse(d, m, resp, err)
 	}
-	if requestType == "SCHEDULED" {
+	if requestType == "scheduled" {
 		req, err := singularity.NewScheduledRequest(id, cronFormat, scheduleType)
 		if err != nil {
 			return fmt.Errorf("Create new scheduled type request error %v", err)
 		}
 		req.NumRetriesOnFailure = numRetriesOnFailure
+		resp, err := singularity.CreateRequest(clientConn(m), req)
+		return checkResponse(d, m, resp, err)
+	}
+	if requestType == "service" {
+		req := singularity.NewServiceRequest(id, instances)
+		resp, err := singularity.CreateRequest(clientConn(m), req)
+		return checkResponse(d, m, resp, err)
+	}
+	if requestType == "on_demand" {
+		req := singularity.NewOnDemandRequest(id)
+		resp, err := singularity.CreateRequest(clientConn(m), req)
+		return checkResponse(d, m, resp, err)
+	}
+	if requestType == "worker" {
+		req := singularity.NewWorkerRequest(id, instances)
 		resp, err := singularity.CreateRequest(clientConn(m), req)
 		return checkResponse(d, m, resp, err)
 	}
