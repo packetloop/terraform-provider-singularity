@@ -152,9 +152,6 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("num_retries_on_failure") ||
 		d.HasChange("schedule") ||
 		d.HasChange("schedule_type") {
-		// TOOD: Replace harcoded false with actual deleteFromLoadbalancer value if
-		// we start using it. Otherwise, keep it simple.
-		// TODO: Use closure.
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather
 		// than delete and add.
@@ -172,6 +169,8 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 
 func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
 	id := d.Get("request_id").(string)
+	// TOOD: Replace harcoded false with actual deleteFromLoadbalancer value if
+	// we start using it. Otherwise, keep it simple.
 	req := singularity.NewDeleteRequest((id),
 		"Terraform detected changes",
 		"Terraform update",
