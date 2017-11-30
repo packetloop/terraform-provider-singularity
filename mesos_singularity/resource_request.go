@@ -1,4 +1,4 @@
-package singularity
+package mesos_singularity
 
 import (
 	"fmt"
@@ -83,6 +83,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(id)
 
+	log.Printf("Singularity request  '%s' is being provisioned...", id)
 	if requestType == "run_once" {
 		req := singularity.NewRunOnceRequest(id, instances)
 		resp, err := singularity.CreateRequest(clientConn(m), req)
@@ -141,6 +142,9 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	if r.GoRes.StatusCode == 404 {
 		return fmt.Errorf("%v", r.GoRes.Status)
 	}
+
+	// Capture additional properties that are only available after deployment.
+	d.Set("state", r.Body.State)
 	return nil
 }
 
@@ -182,5 +186,6 @@ func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
 	if resp.GoRes.StatusCode == 404 {
 		return fmt.Errorf("Singularity request ID %v not found", id)
 	}
+	d.SetId("")
 	return nil
 }

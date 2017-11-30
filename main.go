@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/plugin"
-	"github.com/lenfree/terraform-provider-singularity/singularity"
+	singularity "github.com/lenfree/terraform-provider-singularity/mesos_singularity"
 )
 
 func main() {

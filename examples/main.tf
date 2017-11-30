@@ -21,7 +21,7 @@ resource "singularity_request" "my-server-demand" {
 }
 
 resource "singularity_request" "my-server-scheduled" {
-  request_id   = "lenfree-test-schedueld"
+  request_id   = "lenfree-test-scheduled"
   request_type = "SCHEDULED"
 }
 

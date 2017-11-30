@@ -1,4 +1,4 @@
-package singularity
+package mesos_singularity
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
@@ -33,6 +33,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"singularity_request": resourceRequest(),
+			//"singularity_deploy": resourceDeploy(),
 		},
 
 		/* DataSources placeholder

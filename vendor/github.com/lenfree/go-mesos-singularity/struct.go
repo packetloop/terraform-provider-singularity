@@ -47,7 +47,7 @@ type RequestDeployState struct {
 }
 
 // Request struct contains all singularity requests.
-// This have a JSON response of /api/requests.
+// This have a JSON response of /api/requests/request/ID.
 type Request struct {
 	SingularityRequest `json:"request"`
 	RequestDeployState `json:"requestDeployState"`
@@ -186,6 +186,7 @@ type RequestScheduled struct {
 	NumRetriesOnFailure                             int64             `json:"numRetriesOnFailure"`
 	RequestType                                     string            `json:"requestType"`
 	Schedule                                        string            `json:"schedule"`
+	ScheduleType                                    string            `json:"scheduleType"`
 	HideEvenNumberAcrossRacksHint                   bool              `json:"hideEventNumerAcrossRacksHint"`
 	TaskExecutionTimeLimitMillis                    int               `json:"taskExecutionTimeLimitMills"`
 	TaskLogErrorRegexCaseSensitive                  bool              `json:"taskLogErrorRegexCaseSensitive"`

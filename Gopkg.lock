@@ -50,6 +50,12 @@
   version = "v3.5.1"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
   revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
@@ -128,8 +134,14 @@
   revision = "fa9f258a92500514cc8e9c67020487709df92432"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/logutils"
+  packages = ["."]
+  revision = "0dc08b1671f34c4250ce212759ebd880f743d883"
+
+[[projects]]
   name = "github.com/hashicorp/terraform"
-  packages = ["config","config/configschema","config/hcl2shim","config/module","dag","flatmap","helper/hashcode","helper/hilmapstructure","helper/schema","moduledeps","plugin","plugin/discovery","registry/regsrc","registry/response","svchost","svchost/auth","svchost/disco","terraform","tfdiags","version"]
+  packages = ["config","config/configschema","config/hcl2shim","config/module","dag","flatmap","helper/config","helper/hashcode","helper/hilmapstructure","helper/logging","helper/resource","helper/schema","moduledeps","plugin","plugin/discovery","registry/regsrc","registry/response","svchost","svchost/auth","svchost/disco","terraform","tfdiags","version"]
   revision = "ec9d4f1d0f90e8ec5148f94b6d634eb542a4f0ce"
   version = "v0.11.0"
 
@@ -148,7 +160,7 @@
   branch = "master"
   name = "github.com/lenfree/go-mesos-singularity"
   packages = ["."]
-  revision = "8924f4436e0340fb81b7502f23db87773e878db2"
+  revision = "1841e4166a3785eb36ba093e058748835965fc98"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -291,6 +303,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fd7480cbbd48664b6484225bfb804382262b0ca68c8521f264ac46883be2fab6"
+  inputs-digest = "0b02e736a571aede08bf14b606158726c6bfbdae4c41387fdebc7e181211217b"
   solver-name = "gps-cdcl"
   solver-version = 1

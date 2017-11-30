@@ -1,4 +1,4 @@
-package singularity
+package mesos_singularity
 
 import (
 	"github.com/lenfree/go-mesos-singularity"

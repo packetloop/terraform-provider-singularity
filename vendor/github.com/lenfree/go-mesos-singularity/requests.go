@@ -155,9 +155,10 @@ func NewScheduledRequest(id, s, t string) (*RequestScheduled, error) {
 		return &RequestScheduled{}, fmt.Errorf("Parse %s cron schedule error %v", s, err)
 	}
 	return &RequestScheduled{
-		ID:          id,
-		RequestType: "SCHEDULED",
-		Schedule:    s,
+		ID:           id,
+		RequestType:  "SCHEDULED",
+		ScheduleType: "CRON", // Only allow cron since this is widely known than quartz.
+		Schedule:     s,
 	}, nil
 }
 

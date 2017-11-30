@@ -36,7 +36,9 @@ func TestNewScheduledRequest(t *testing.T) {
 	expectedID := "test-scheduled"
 	expectedType := "SCHEDULED"
 	expectedCron := "*/30 * * * *"
-	req, _ := NewScheduledRequest(expectedID, expectedCron, "CRON")
+	expectedScheduleType := "CRON"
+
+	req, _ := NewScheduledRequest(expectedID, expectedCron, expectedScheduleType)
 	if req.ID != expectedID {
 		t.Errorf("Got %s, expected %s", req.ID, expectedID)
 	}
@@ -45,6 +47,9 @@ func TestNewScheduledRequest(t *testing.T) {
 	}
 	if req.Schedule != expectedCron || req.Schedule == "" {
 		t.Errorf("Got %v, expected %v", req.Schedule, expectedCron)
+	}
+	if req.ScheduleType != "CRON" {
+		t.Errorf("Got %s, expected %s", req.ScheduleType, expectedScheduleType)
 	}
 
 	invalidCron := "* * * * * * *"
