@@ -14,7 +14,6 @@ func TestAccSingularityRequestScheduledCreate(t *testing.T) {
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckSingularityRequestDestroy,
 		Steps: []resource.TestStep{
-
 			{
 				Config: testAccCheckSingularityRequestScheduledConfig,
 				Check: resource.ComposeTestCheckFunc(
@@ -27,6 +26,27 @@ func TestAccSingularityRequestScheduledCreate(t *testing.T) {
 						"singularity_request.foo", "schedule", "0 7 * * *"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo", "schedule_type", "CRON"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccSingularityRequestWorkerCreate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckSingularityRequestDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckSingularityRequestRunOnceConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSingularityRequestExists("singularity_request.foo-run"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.foo-run", "request_id", "foo-run-id"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.foo-run", "request_type", "RUN_ONCE"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.foo-run", "instances", "5"),
 				),
 			},
 		},
@@ -46,6 +66,7 @@ const testAccCheckSingularityRequestRunOnceConfig = `
 resource "singularity_request" "foo-run" {
 			request_id             = "foo-run-id"
 			request_type           = "RUN_ONCE"
+			instances              = 5
 }
 `
 
@@ -56,7 +77,7 @@ resource "singularity_request" "foo-service" {
 }
 `
 
-const testAccCheckSingularityRequestWORKERConfig = `
+const testAccCheckSingularityRequestWorkerConfig = `
 resource "singularity_request" "foo-worker" {
 			request_id             = "foo-worker-id"
 			request_type           = "WORKER"
@@ -67,61 +88,6 @@ func testAccCheckSingularityRequestExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testAccProvider.Meta().(*Conn).sclient
 		return SingularityRequestExistsHelper(s, client)
-	}
-}
-
-func testAccSingularityRequestBasic(requestID, requestType, schedule, scheduleType string) string {
-	return fmt.Sprintf(`
-		provider "singularity" {
-			host = "localhost"
-		}
-		resource "singularity_request" "my-server" {
-			request_id             = "%s"
-			request_type           = "%s"
-			schedule               = "%s"
-			schedule_type          = "%s"
-		}`,
-		requestID, requestType, schedule, scheduleType,
-	)
-}
-
-func testCheckSingularityRequestScheduledMatches(name string, expected singularity.RequestScheduled) resource.TestCheckFunc {
-	// state is the Terraform state data after the configuration has been applied
-	return func(s *terraform.State) error {
-		// Find the state data for the target resource
-		res, ok := s.RootModule().Resources[name]
-		fmt.Printf("%+#v\n", res)
-		if !ok {
-			return fmt.Errorf("Not found: %s", name)
-		}
-
-		requestID := res.Primary.ID
-
-		client := testAccProvider.Meta().(*Conn).sclient
-		data, err := client.GetRequestByID(requestID)
-		if err != nil {
-			return fmt.Errorf("Bad: Get request id : %s", err)
-		}
-		if requestID == "" {
-			return fmt.Errorf("Bad: Request id not found with Id '%s'", requestID)
-		}
-
-		// Assertions
-		if data.Body.RequestID != expected.ID {
-			return fmt.Errorf("Bad: Request id '%s' has request_id '%s' (expected '%s')", requestID, data.Body.RequestID, expected.ID)
-		}
-
-		if data.Body.State != "ACTIVE" {
-			return fmt.Errorf("Bad: Request id '%s' has state '%s' (expected '%s')", requestID, data.Body.State, "ACTIVE")
-		}
-		if data.Body.Schedule != expected.Schedule {
-			return fmt.Errorf("Bad: Request id '%s' has schedule '%s' (expected '%s')", requestID, data.Body.Schedule, expected.Schedule)
-		}
-		if data.Body.ScheduleType != expected.ScheduleType {
-			return fmt.Errorf("Bad: Request id '%s' has schedule '%s' (expected '%s')", requestID, data.Body.ScheduleType, expected.ScheduleType)
-		}
-
-		return nil
 	}
 }
 
