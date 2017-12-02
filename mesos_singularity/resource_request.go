@@ -23,8 +23,10 @@ func resourceRequest() *schema.Resource {
 				Required: true,
 			},
 			"request_type": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validateRequestType,
 			},
 			"num_retries_on_failure": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -35,12 +37,20 @@ func resourceRequest() *schema.Resource {
 				Optional: true,
 			},
 			"schedule_type": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validateRequestScheduleType,
 			},
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
+			},
+			"state": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
+				ValidateFunc: validateRequestState,
 			},
 		},
 	}
@@ -69,6 +79,8 @@ func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e err
 	if r.GoRes.StatusCode == 404 {
 		return false, fmt.Errorf("%v", r.GoRes.Status)
 	}
+	// Capture additional properties that are only available after deployment.
+	d.Set("state", r.Body.State)
 	return true, nil
 
 }
@@ -83,6 +95,9 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(id)
 
+	// Singularity expects uppercase of these values and in our validator,
+	// we expect only uppercase to make our resource simpler. Having said
+	// that, it does not hurt to always check for value/s in same lowercase.
 	log.Printf("Singularity request  '%s' is being provisioned...", id)
 	if requestType == "run_once" {
 		req := singularity.NewRunOnceRequest(id, instances)
@@ -142,9 +157,9 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	if r.GoRes.StatusCode == 404 {
 		return fmt.Errorf("%v", r.GoRes.Status)
 	}
-
 	// Capture additional properties that are only available after deployment.
 	d.Set("state", r.Body.State)
+
 	return nil
 }
 

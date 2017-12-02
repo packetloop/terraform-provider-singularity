@@ -3,3 +3,4 @@ crash.log
 terraform-provider-singularity
 .terraform
 terraform.tfstate
+.vscode
