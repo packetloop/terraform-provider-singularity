@@ -15,17 +15,11 @@ func TestAccSingularityDeployDockerCreate(t *testing.T) {
 		CheckDestroy: testCheckSingularityRequestDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckSingularityRequestScheduledConfig,
+				Config: testAccCheckSingularityDeployConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckSingularityRequestExists("singularity_request.foo"),
+					testAccCheckSingularityDeployDockerExists("singularity_deploy_docker.foo"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo", "request_id", "foo-test-id"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "request_type", "SCHEDULED"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "schedule", "0 7 * * *"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "schedule_type", "CRON"),
 				),
 			},
 		},
@@ -33,8 +27,8 @@ func TestAccSingularityDeployDockerCreate(t *testing.T) {
 }
 
 const testAccCheckSingularityDeployDockerConfig = `
-resource "singularity_deploy_docker" "foo-ondemand" {
-  	image = arbornetworks-docker-docker.bintray.io/atlas-visibility:latest
+resource "singularity_deploy_docker" "foo" {
+  	image = golang:latest
   	network = BRIDGE
   	portMappings = [{
   	  containerPortType = LITERAL
@@ -46,16 +40,16 @@ resource "singularity_deploy_docker" "foo-ondemand" {
 }
 `
 
-func testAccCheckSingularityRequestExists(n string) resource.TestCheckFunc {
+func testAccCheckSingularityDeployDockerExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testAccProvider.Meta().(*Conn).sclient
 		return SingularityRequestExistsHelper(s, client)
 	}
 }
 
-func testCheckSingularityRequestDestroy(state *terraform.State) error {
+func testCheckSingularityDeployDockerDestroy(state *terraform.State) error {
 	for _, res := range state.RootModule().Resources {
-		if res.Type != "singularity_request" {
+		if res.Type != "singularity_deploy_docker" {
 			continue
 		}
 
@@ -75,7 +69,7 @@ func testCheckSingularityRequestDestroy(state *terraform.State) error {
 	return nil
 }
 
-func SingularityRequestExistsHelper(s *terraform.State, client *singularity.Client) error {
+func SingularityDeployDockerExistsHelper(s *terraform.State, client *singularity.Client) error {
 	for _, r := range s.RootModule().Resources {
 		id := r.Primary.ID
 		if _, err := client.GetRequestByID(id); err != nil {

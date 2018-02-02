@@ -6,26 +6,36 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	singularity "github.com/lenfree/go-mesos-singularity"
+	singularity "github.com/lenfree/go-singularity"
 )
 
-func TestAccSingularityDeployDocker(t *testing.T) {
+func TestAccSingularityDeploy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckSingularityRequestDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckSingularityRequestScheduledConfig,
+				Config: testAccCheckSingularityDeployConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckSingularityRequestExists("singularity_request.foo"),
+					testAccCheckSingularityDeployExists("singularity_deploy.foo"),
 					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "request_id", "foo-test-id"),
+						"singularity_deploy.foo", "request_id", "foo-test-id"),
 					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "request_type", "SCHEDULED"),
+						"singularity_deploy.foo", "command", "./start.sh"),
 					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "schedule", "0 7 * * *"),
+						"singularity_deploy.foo", "resources.cpus", "1"),
 					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "schedule_type", "CRON"),
+						"singularity_deploy.foo", "resources.memoryMb", "2048"),
+					resource.TestCheckResourceAttr(
+						"singularity_deploy.foo", "containerInfo.type.", "DOCKER"),
+					resource.TestCheckResourceAttr(
+						"singularity_deploy.foo", "env.NODE_REQUEST_TIMEOUT", "2m"),
+					resource.TestCheckResourceAttr(
+						"singularity_deploy.foo", "env.NODE_REQUEST_NODE_PORT", "3000"),
+					resource.TestCheckResourceAttr(
+						"singularity_deploy.foo", "env.NODE_REQUEST_NODE_HOST", "0.0.0.0"),
+					resource.TestCheckResourceAttr(
+						"singularity_deploy.foo", "env.SERVICE_TAGS.club_name", "myclub"),
 				),
 			},
 		},
@@ -34,7 +44,7 @@ func TestAccSingularityDeployDocker(t *testing.T) {
 
 // create a resource singularity_docker and attach to
 // singuarltiy_deploy. Maybe a docker env, port resource?
-const testAccCheckSingularityDeployDockerConfig = `
+const testAccCheckSingularityDeployConfig = `
   resource "singularity_deploy" "foo" {
   request_id = "test-deploy"
   command = "/start.sh"
@@ -48,17 +58,16 @@ const testAccCheckSingularityDeployDockerConfig = `
 	type: DOCKER
   }
 
-    env {
-      NODE_REQUEST_TIMEOUT = "2m"
-      NODE_PORT = "3000"
-      NODE_HOST = "0.0.0.0"
-      SERVICE_TAGS {
-	  	"club_name" = "myclub"
-	  	"club_id" = "myid"
-	  }
-    }
+  env {
+    NODE_REQUEST_TIMEOUT = "2m"
+    NODE_PORT = "3000"
+    NODE_HOST = "0.0.0.0"
+    SERVICE_TAGS {
+	 "club_name" = "myclub"
+	 "club_id" = "myid"
   }
-  `
+}
+`
 
 func testAccCheckSingularityDeployExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -69,7 +78,7 @@ func testAccCheckSingularityDeployExists(n string) resource.TestCheckFunc {
 
 func testCheckSingularityDeployDestroy(state *terraform.State) error {
 	for _, res := range state.RootModule().Resources {
-		if res.Type != "singularity_deploiy" {
+		if res.Type != "singularity_deploy" {
 			continue
 		}
 
@@ -84,7 +93,7 @@ func testCheckSingularityDeployDestroy(state *terraform.State) error {
 			return nil
 		}
 		// If request_id does not exists, it gets a response status code 404 Not Found.
-		if data.GoRes.StatusCode != 404 {
+		if data.RestyResponse.StatusCode() != 404 {
 			return fmt.Errorf("There was an error deleting request id '%s'", requestID)
 		}
 		// If there is a deploy id, a deploy exists.
