@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	singularity "github.com/lenfree/go-mesos-singularity"
+	singularity "github.com/lenfree/go-singularity"
 )
 
 func resourceRequest() *schema.Resource {
@@ -76,11 +76,9 @@ func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e err
 	if err != nil {
 		return false, err
 	}
-	if r.GoRes.StatusCode == 404 {
-		return false, fmt.Errorf("%v", r.GoRes.Status)
+	if r.RestyResponse.StatusCode() == 404 {
+		return false, fmt.Errorf("%v", r.RestyResponse.Status())
 	}
-	// Capture additional properties that are only available after deployment.
-	d.Set("state", r.Body.State)
 	return true, nil
 
 }
@@ -133,13 +131,13 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 }
 
 func checkResponse(d *schema.ResourceData, m interface{}, r singularity.HTTPResponse, err error) error {
-	log.Printf("[TRACE] HTTP Response %v", r.GoRes)
+	log.Printf("[TRACE] HTTP Response %v", r.RestyResponse)
 
 	if err != nil {
 		return fmt.Errorf("Create Singularity request error: %v", err)
 	}
-	if r.GoRes.StatusCode <= 200 && r.GoRes.StatusCode >= 299 {
-		return fmt.Errorf("Create Singularity request error %v: %v", r.GoRes.StatusCode, err)
+	if r.RestyResponse.StatusCode() <= 200 && r.RestyResponse.StatusCode() >= 299 {
+		return fmt.Errorf("Create Singularity request error %v: %v", r.RestyResponse.StatusCode(), err)
 	}
 	return resourceRequestRead(d, m)
 }
@@ -154,12 +152,9 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	if err != nil {
 		return err
 	}
-	if r.GoRes.StatusCode == 404 {
-		return fmt.Errorf("%v", r.GoRes.Status)
+	if r.RestyResponse.StatusCode() == 404 {
+		return fmt.Errorf("%v", r.RestyResponse.Status())
 	}
-	// Capture additional properties that are only available after deployment.
-	d.Set("state", r.Body.State)
-
 	return nil
 }
 
@@ -198,7 +193,7 @@ func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
 	if err != nil {
 		return err
 	}
-	if resp.GoRes.StatusCode == 404 {
+	if resp.RestyResponse.StatusCode() == 404 {
 		return fmt.Errorf("Singularity request ID %v not found", id)
 	}
 	d.SetId("")

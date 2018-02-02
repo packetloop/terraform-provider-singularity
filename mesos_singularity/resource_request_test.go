@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	singularity "github.com/lenfree/go-mesos-singularity"
+	singularity "github.com/lenfree/go-singularity"
 )
 
 func TestAccSingularityRequestScheduledCreate(t *testing.T) {
@@ -186,7 +186,7 @@ func SingularityRequestExistsHelper(s *terraform.State, client *singularity.Clie
 	for _, r := range s.RootModule().Resources {
 		id := r.Primary.ID
 		if _, err := client.GetRequestByID(id); err != nil {
-			return fmt.Errorf("Received an error retrieving user %s", err)
+			return fmt.Errorf("Received an error retrieving request id %s", err)
 		}
 	}
 	return nil

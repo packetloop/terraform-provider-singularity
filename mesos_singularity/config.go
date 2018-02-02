@@ -1,7 +1,7 @@
 package mesos_singularity
 
 import (
-	"github.com/lenfree/go-mesos-singularity"
+	"github.com/lenfree/go-singularity"
 )
 
 // Conn is the client connection manager for singularity provider.
@@ -22,12 +22,13 @@ type Config struct {
 // We don't do any authorisation as of the moment. Hence, this block
 // is simple.
 func (c *Config) Client() (*Conn, error) {
-	config := singularity.Config{
-		Host:  c.Host,
-		Port:  c.Port,
-		Retry: c.Retry,
-	}
-	client := singularity.New(config)
+	cf := singularity.NewConfig().
+		SetHost(c.Host).
+		SetPort(c.Port).
+		SetRetry(c.Retry).
+		Build()
+
+	client := singularity.NewClient(cf)
 
 	return &Conn{
 		sclient: client,
