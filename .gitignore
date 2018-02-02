@@ -4,3 +4,4 @@ terraform-provider-singularity
 .terraform
 terraform.tfstate
 .vscode
+terraform.tfstate.backup
