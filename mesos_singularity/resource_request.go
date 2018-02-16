@@ -98,32 +98,42 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	// that, it does not hurt to always check for value/s in same lowercase.
 	log.Printf("Singularity request  '%s' is being provisioned...", id)
 	if requestType == "run_once" {
-		req := singularity.NewRunOnceRequest(id, instances)
-		resp, err := singularity.CreateRequest(clientConn(m), req)
+		resp, err := singularity.NewRequest(singularity.RUN_ONCE, id).
+			SetInstances(instances).Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "scheduled" {
-		req, err := singularity.NewScheduledRequest(id, cronFormat, scheduleType)
+		req, err := singularity.NewRequest(singularity.SCHEDULED, id).
+			SetNumRetriesOnFailures(numRetriesOnFailure).
+			SetSchedule(cronFormat)
+		if err != nil {
+			return fmt.Errorf("cronFormat invalid: %v", err)
+		}
+		s, err := req.SetScheduleType(scheduleType)
+		if err != nil {
+			return fmt.Errorf("scheduleType invalid: %v", err)
+		}
+		resp, err := s.Create(clientConn(m))
 		if err != nil {
 			return fmt.Errorf("Create new scheduled type request error %v", err)
 		}
-		req.NumRetriesOnFailure = numRetriesOnFailure
-		resp, err := singularity.CreateRequest(clientConn(m), req)
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "service" {
-		req := singularity.NewServiceRequest(id, instances)
-		resp, err := singularity.CreateRequest(clientConn(m), req)
+		resp, err := singularity.NewRequest(singularity.SERVICE, id).
+			SetInstances(instances).
+			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "on_demand" {
-		req := singularity.NewOnDemandRequest(id)
-		resp, err := singularity.CreateRequest(clientConn(m), req)
+		resp, err := singularity.NewRequest(singularity.ON_DEMAND, id).
+			SetInstances(instances).
+			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "worker" {
-		req := singularity.NewWorkerRequest(id, instances)
-		resp, err := singularity.CreateRequest(clientConn(m), req)
+		resp, err := singularity.NewRequest(singularity.WORKER, id).
+			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 
