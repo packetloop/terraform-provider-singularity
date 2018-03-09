@@ -10,7 +10,7 @@ import (
 	singularity "github.com/lenfree/go-singularity"
 )
 
-func ExampleCreateRequest() {
+func ExampleNewRequest() {
 
 	const (
 		ON_DEMAND = 1
@@ -26,7 +26,9 @@ func ExampleCreateRequest() {
 		SetRetry(3).
 		Build()
 	client := singularity.NewClient(c)
-	res, _ := singularity.NewRequest(ON_DEMAND, "").SetID("lenfree-test").Create(client)
+	res, _ := singularity.NewRequest(ON_DEMAND, "").
+		SetID("lenfree-test").
+		Create(client)
 	fmt.Println(res.RestyResponse.Status())
 	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	data, _ := json.Marshal(res.Body)
@@ -65,7 +67,7 @@ func ExampleClient_GetRequestByID() {
 	// This requestID have a deploy attach to it. Hence,
 	// it can be decode to type Task.
 	resp, _ := client.GetRequestByID(r[0].ID)
-	fmt.Printf("debug: %s\n", resp.Body.ActiveDeploy.ContainerInfo.Docker.Image)
+	fmt.Printf("debug: %s\n", resp.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image)
 
 	// Output:
 	// golang:latest
@@ -84,6 +86,64 @@ func ExampleDeleteRequest() {
 
 	// Output:
 	// lenfree-test-run-once
+}
+
+func ExampleNewDeployRequest() {
+	c := singularity.NewConfig().SetHost("localhost").
+		SetPort(80).
+		SetRetry(3).
+		Build()
+	client := singularity.NewClient(c)
+
+	res, _ := singularity.NewRequest(singularity.ON_DEMAND, "").
+		SetID("test_id").
+		Create(client)
+
+	info := singularity.ContainerInfo{
+		Type: "DOCKER",
+		DockerInfo: singularity.DockerInfo{
+			ForcePullImage: false,
+			Network:        "BRIDGE",
+			Image:          "golang:latest",
+		},
+	}
+	resource := singularity.SingularityDeployResources{
+		Cpus:     0.5,
+		MemoryMb: 128,
+	}
+	d := singularity.NewDeploy("tset_deploy_2")
+	label := map[string]string{"owner": "lenfree"}
+	c_info, _ := d.SetContainerInfo(info)
+	deploy := c_info.SetLabels(label).
+		SetCommand("bash").
+		SetArgs("-xc", "date").
+		SetRequestID("test_id").
+		SetSkipHealthchecksOnDeploy(true).
+		SetResources(resource).
+		Build()
+	newdeploy, err := singularity.NewDeployRequest().
+		AttachRequest(res.Body).
+		AttachDeploy(deploy).
+		Build().
+		Create(client)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Printf("%v\n", deploy)
+		os.Exit(1)
+	}
+	fmt.Printf("Docker info: %v\n", newdeploy.RequestParent.ActiveDeploy.DockerInfo)
+
+	// Output:
+	// Docker info: singularity.DockerInfo{
+	//	 Parameters:map[string]string{},
+	//	 ForcePullImage:false,
+	//	 SingularityDockerParameter:singularity.SingularityDockerParameter{
+	//	 	Key:"",
+	//	 	Value:""
+	//	 },
+	//	 Privileged:false,
+	//	 Network:"BRIDGE",
+	//	 Image:"arbornetworks-docker-docker.bintray.io/aws-cli_0.2.0:18da34d"}
 }
 
 func ExampleScaleRequest() {

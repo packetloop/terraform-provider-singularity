@@ -171,7 +171,8 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 	d.Partial(true)
 
-	if d.HasChange("schedule") ||
+	if d.HasChange("request_id") ||
+		d.HasChange("schedule") ||
 		d.HasChange("request_type") ||
 		d.HasChange("num_retries_on_failure") ||
 		d.HasChange("schedule") ||
@@ -192,10 +193,9 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
-	id := d.Get("request_id").(string)
 	// TOOD: Replace harcoded false with actual deleteFromLoadbalancer value if
 	// we start using it. Otherwise, keep it simple.
-	req := singularity.NewDeleteRequest((id),
+	req := singularity.NewDeleteRequest((d.Id()),
 		"Terraform detected changes",
 		"Terraform update",
 		false)
@@ -204,7 +204,7 @@ func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 	if resp.RestyResponse.StatusCode() == 404 {
-		return fmt.Errorf("Singularity request ID %v not found", id)
+		return fmt.Errorf("Singularity request ID %v not found", d.Id())
 	}
 	d.SetId("")
 	return nil

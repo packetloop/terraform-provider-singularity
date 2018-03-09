@@ -8,10 +8,7 @@ go-singularity
 
 A Go binding for Mesos hubspot/Singularity binding. Since I couldn't
 manage to find one, hence, write a new one. One of the intention of
-having this package is so I could write a Terraform provider to
-interface with this.
-
-# Status [ WORK IN PROGRESS ]
+having this package is to allow me to easily write a Terraform provider.
 
 ## Usage:
 

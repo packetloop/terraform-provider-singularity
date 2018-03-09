@@ -1,5 +1,5 @@
 provider "singularity" {
-    host = "localhost"
+    host = "localhost/singularity"
 }
 
 resource "singularity_request" "my-server" {
@@ -17,7 +17,7 @@ resource "singularity_request" "lenfree-run" {
 }
 
 resource "singularity_request" "lenfree-demand" {
-  request_id   = "lenfree-ondemand"
+  request_id   = "lenfree-ondemand-2"
   request_type = "ON_DEMAND"
 }
 

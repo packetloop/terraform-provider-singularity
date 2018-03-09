@@ -15,9 +15,3 @@ endif
 .PHONY: build
 build:
 	go build -o examples/terraform-provider-singularity
-
-.PHONY: tf-init
-tf-init:
-	terraform init
-	mv .terraform /tmp
-	mv terraform.tfstate /tmp

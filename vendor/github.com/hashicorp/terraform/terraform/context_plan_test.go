@@ -2401,6 +2401,32 @@ func TestContext2Plan_hook(t *testing.T) {
 	}
 }
 
+func TestContext2Plan_closeProvider(t *testing.T) {
+	// this fixture only has an aliased provider located in the module, to make
+	// sure that the provier name contains a path more complex than
+	// "provider.aws".
+	m := testModule(t, "plan-close-module-provider")
+	p := testProvider("aws")
+	p.DiffFn = testDiffFn
+	ctx := testContext2(t, &ContextOpts{
+		Module: m,
+		ProviderResolver: ResourceProviderResolverFixed(
+			map[string]ResourceProviderFactory{
+				"aws": testProviderFuncFixed(p),
+			},
+		),
+	})
+
+	_, err := ctx.Plan()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !p.CloseCalled {
+		t.Fatal("provider not closed")
+	}
+}
+
 func TestContext2Plan_orphan(t *testing.T) {
 	m := testModule(t, "plan-orphan")
 	p := testProvider("aws")
@@ -3499,12 +3525,9 @@ func TestContext2Plan_resourceNestedCount(t *testing.T) {
 		State: s,
 	})
 
-	w, e := ctx.Validate()
-	if len(w) > 0 {
-		t.Fatalf("warnings generated on validate: %#v", w)
-	}
-	if len(e) > 0 {
-		t.Fatalf("errors generated on validate: %#v", e)
+	diags := ctx.Validate()
+	if len(diags) != 0 {
+		t.Fatalf("bad: %#v", diags)
 	}
 
 	_, err := ctx.Refresh()
@@ -3582,12 +3605,9 @@ output "out" {
 	})
 
 	// if this ever fails to pass validate, add a resource to reference in the config
-	w, e := ctx.Validate()
-	if len(w) > 0 {
-		t.Fatalf("warnings generated on validate: %#v", w)
-	}
-	if len(e) > 0 {
-		t.Fatalf("errors generated on validate: %v", e)
+	diags := ctx.Validate()
+	if len(diags) != 0 {
+		t.Fatalf("bad: %#v", diags)
 	}
 
 	_, err := ctx.Refresh()
@@ -3630,12 +3650,9 @@ resource "aws_instance" "foo" {
 	})
 
 	// if this ever fails to pass validate, add a resource to reference in the config
-	w, e := ctx.Validate()
-	if len(w) > 0 {
-		t.Fatalf("warnings generated on validate: %#v", w)
-	}
-	if len(e) > 0 {
-		t.Fatalf("errors generated on validate: %v", e)
+	diags := ctx.Validate()
+	if len(diags) != 0 {
+		t.Fatalf("bad: %#v", diags)
 	}
 
 	_, err := ctx.Refresh()

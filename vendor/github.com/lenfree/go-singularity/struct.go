@@ -77,18 +77,45 @@ type SingularityDockerPortMapping struct {
 }
 */
 type Docker struct {
-	ForcePullImage bool              `json:"forcePullImage"`
-	Image          string            `json:"image"`
-	Parameters     map[string]string `json:"parameters"`
-	Privileged     bool              `json:"privileged"`
+	ForcePullImage bool              `json:"forcePullImage,omitempty"`
+	Image          string            `json:"image,omitempty"`
+	Parameters     map[string]string `json:"parameters,omitempty"`
+	Privileged     bool              `json:"privileged,omitempty"`
 }
 
 // ContainerInfo contains information about a Docker type Singularity
 // container type.
 // https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#-singularitycontainerinfo
 type ContainerInfo struct {
-	Docker `json:"docker"`
-	Type   string `json:"type"` // Allowable values: MESOS, DOCKER. Default is MESOS.
+	DockerInfo `json:"docker"`
+	Type       string              `json:"type"` // Allowable values: MESOS, DOCKER. Default is MESOS.
+	Volumes    []SingularityVolume `json:"volumes,omitempty"`
+}
+
+//https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerInfo
+type DockerInfo struct {
+	Parameters                 map[string]string `json:"parameters,omitempty"`
+	ForcePullImage             bool              `json:"forcePullImage,omitempty"`
+	SingularityDockerParameter `json:"dockerParameters,omitEmpty"`
+	Privileged                 bool   `json:"privileged,omitEmpty"`
+	Network                    string `json:"network,omitEmpty"`
+	//network	com.hubspot.mesos.SingularityDockerNetworkType	optional	Docker netowkr type. Value can be BRIDGE, HOST, or NONE
+	//portMappings	Array[SingularityDockerPortMapping]	optional	List of port mappings
+	Image string `json:"image"`
+}
+
+// https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerParameter
+type SingularityDockerParameter struct {
+	Key   string `json:"key,omitEmpty"`
+	Value string `json:"value,omitEmpty"`
+}
+
+// SingularityVolume contains information about Docker volume. This is optional.
+// https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityVolume
+type SingularityVolume struct {
+	HostPath      string `json:"host_path"`
+	ContainerPath string `json:"containerPath"`
+	Mode          string `json:"mode"`
 }
 
 // Task contains JSON response of /api/requests/request/ID.
@@ -118,10 +145,10 @@ type Task struct {
 // SingularityDeployResources includes information about required/configured
 // resources needed for a request/job.
 type SingularityDeployResources struct {
-	Cpus     float64 `json:"cpus"`
-	MemoryMb float64 `json:"memoryMb"`
-	NumPorts int64   `json:"numPorts"`
-	DiskMb   float64 `json:"diskMb"`
+	Cpus     float64 `json:"cpus,omitempty"`
+	MemoryMb float64 `json:"memoryMb,omitempty"`
+	NumPorts int64   `json:"numPorts,omitempty"`
+	DiskMb   float64 `json:"diskMb,omitempty"`
 }
 
 // SingularityScaleRequest contains parameters for making scaling a request. For more info, please see:
@@ -240,41 +267,49 @@ type ExecutorData struct {
 	Cmd                            string                `json:"cmd"`                            // required	Command for the custom executor to run
 }
 
-// SingularityDeploycontains requird and optional parameter to configure
+// https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityMesosArtifact
+type SingularityMesosArtifact struct {
+	Cache      bool   `json:"cache,omitempty"`
+	URI        string `json:"uri,omitempty"`
+	Extract    bool   `json:"extact,omitempty"`
+	Executable bool   `json:"executabl,omitempty"`
+}
+
+// SingularityDeploy contains requird and optional parameter to configure
 // a new and existing Singularity deploy.
 type SingularityDeploy struct {
-	CustomExecutorID                      string `json:"customExecutorId"`
-	SingularityDeployResources            `json:"resources"`
-	Uris                                  []string `json:"uris"` //Array[SingularityMesosArtifact]	optional	List of URIs to download before executing the deploy command.
+	CustomExecutorID                      string `json:"customExecutorId,omitempty"`
+	SingularityDeployResources            `json:"resources,omitempty"`
+	Uris                                  []SingularityMesosArtifact `json:"uris,omitempty"` //Array[SingularityMesosArtifact]	optional	List of URIs to download before executing the deploy command.
 	ContainerInfo                         `json:"containerInfo"`
-	Arguments                             []string                            `json:"arguments"`
-	TaskEnv                               interface{}                         `json:"taskEnv"` // map[int]map[string]string //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
-	AutoAdvanceDeploySteps                bool                                `json:"autoAdvanceDeploySteps"`
-	ServiceBasePath                       string                              `json:"serviceBasePath"` // The base path for the API exposed by the deploy. Used in conjunction with the Load balancer API.
-	CustomExecutorSource                  string                              `json:"customExecutorSource"`
-	Metadata                              map[string]string                   `json:"metadata"`                 //ap of metadata key/value pairs associated with the deployment.
-	TaskLabels                            map[int]map[string]string           `json:"taskLabels"`               //Map[int,Map[string,string]]	optional	(Deprecated) Labels for specific tasks associated with this deploy, indexed by instance number
-	MesosTaskLabels                       map[int][]SingularityMesosTaskLabel `json:"mesosTaskLabels"`          // Map[int,List[SingularityMesosTaskLabel]] 	// optional	Labels for specific tasks associated with this deploy, indexed by instance number
-	Labels                                map[string]string                   `json:"labels"`                   // Map[string,string]	optional	Labels for all tasks associated with this deploy
-	User                                  string                              `json:"user"`                     //optional	Run tasks as this user
-	RequestID                             string                              `json:"requestId"`                // required	Singularity Request Id which is associated with this deploy.
-	DeployStepWaitTimeMs                  int                                 `json:"deployStepWaitTimeMs"`     // optional	wait this long between deploy steps
-	SkipHealthchecksOnDeploy              bool                                `json:"skipHealthchecksOnDeploy"` //optional	Allows skipping of health checks when deploying.
-	MesosLabels                           []SingularityMesosTaskLabel         `json:"mesosLabels"`              //Array[SingularityMesosTaskLabel]	optional	Labels for all tasks associated with this deploy
-	Command                               string                              `json:"command"`                  //optional	Command to execute for this deployment.
-	ExecutorData                          `json:"executorData"`               //	optional	Executor specific information
-	Shell                                 bool                                `json:"shell"`                                 //optional	Override the shell property on the mesos task
-	Timestamp                             int64                               `json:"timestamp"`                             //long	optional	Deploy timestamp.
-	DeployInstanceCountPerStep            int                                 `json:"deployInstanceCountPerStep"`            //	optional	deploy this many instances at a time
-	ConsiderHealthyAfterRunningForSeconds int64                               `json:"considerHealthyAfterRunningForSeconds"` //	optional	Number of seconds that a service must be healthy to consider the deployment to be successful.
-	MaxTaskRetries                        int                                 `json:"maxTaskRetries"`                        // optional	allowed at most this many failed tasks to be retried before failing the deploy
-	SingularityRunNowRequest              `json:"runImmediately"`             // optional	Settings used to run this deploy immediately
-	CustomExecutorCmd                     string                              `json:"customExecutorCmd"` // optional	Custom Mesos executor
-	Env                                   map[string]string                   `json:"env"`               //	optional	Map of environment variable definitions.
+	Arguments                             []string                            `json:"arguments,omitempty"`
+	TaskEnv                               interface{}                         `json:"taskEnv,omitempty"` // map[int]map[string]string //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
+	AutoAdvanceDeploySteps                bool                                `json:"autoAdvanceDeploySteps,omitempty"`
+	ServiceBasePath                       string                              `json:"serviceBasePath,omitempty"` // The base path for the API exposed by the deploy. Used in conjunction with the Load balancer API.
+	CustomExecutorSource                  string                              `json:"customExecutorSource,omitempty"`
+	Metadata                              map[string]string                   `json:"metadata,omitempty"`                 //ap of metadata key/value pairs associated with the deployment.
+	TaskLabels                            map[int]map[string]string           `json:"taskLabels,omitempty"`               //Map[int,Map[string,string]]	optional	(Deprecated) Labels for specific tasks associated with this deploy, indexed by instance number
+	MesosTaskLabels                       map[int][]SingularityMesosTaskLabel `json:"mesosTaskLabels,omitempty"`          // Map[int,List[SingularityMesosTaskLabel]] 	// optional	Labels for specific tasks associated with this deploy, indexed by instance number
+	Labels                                map[string]string                   `json:"labels,omitempty"`                   // Map[string,string]	optional	Labels for all tasks associated with this deploy
+	User                                  string                              `json:"user,omitempty"`                     //optional	Run tasks as this user
+	RequestID                             string                              `json:"requestId"`                          // required	Singularity Request Id which is associated with this deploy.
+	DeployStepWaitTimeMs                  int                                 `json:"deployStepWaitTimeMs,omitempty"`     // optional	wait this long between deploy steps
+	SkipHealthchecksOnDeploy              bool                                `json:"skipHealthchecksOnDeploy,omitempty"` //optional	Allows skipping of health checks when deploying.
+	MesosLabels                           []SingularityMesosTaskLabel         `json:"mesosLabels,omitempty"`              //Array[SingularityMesosTaskLabel]	optional	Labels for all tasks associated with this deploy
+	Command                               string                              `json:"command,omitempty"`                  //optional	Command to execute for this deployment.
+	ExecutorData                          `json:"executorData,omitempty"`     //	optional	Executor specific information
+	Shell                                 bool                                `json:"shell,omitempty"`                                 //optional	Override the shell property on the mesos task
+	Timestamp                             int64                               `json:"timestamp,omitempty"`                             //long	optional	Deploy timestamp.
+	DeployInstanceCountPerStep            int                                 `json:"deployInstanceCountPerStep,omitempty"`            //	optional	deploy this many instances at a time
+	ConsiderHealthyAfterRunningForSeconds int64                               `json:"considerHealthyAfterRunningForSeconds,omitempty"` //	optional	Number of seconds that a service must be healthy to consider the deployment to be successful.
+	MaxTaskRetries                        int                                 `json:"maxTaskRetries,omitempty"`                        // optional	allowed at most this many failed tasks to be retried before failing the deploy
+	SingularityRunNowRequest              `json:"runImmediately,omitempty"`   // optional	Settings used to run this deploy immediately
+	CustomExecutorCmd                     string                              `json:"customExecutorCmd,omitempty"` // optional	Custom Mesos executor
+	Env                                   map[string]string                   `json:"env,omitempty"`               //	optional	Map of environment variable definitions.
 	// SingularityDeployResources            `json:"customExecutorResources"`    // com.hubspot.mesos.Resources	optional	Resources to allocate for custom mesos executor
-	Version                    string `json:"version"`                    //optional	Deploy version
-	ID                         string `json:"id"`                         //required	Singularity deploy id.
-	DeployHealthTimeoutSeconds int64  `json:"deployHealthTimeoutSeconds"` //optional	Number of seconds that Singularity waits for this service to become healthy (for it to download artifacts, start running, and optionally pass health
+	Version                    string `json:"version,omitempty"`                    //optional	Deploy version
+	ID                         string `json:"id"`                                   //required	Singularity deploy id.
+	DeployHealthTimeoutSeconds int64  `json:"deployHealthTimeoutSeconds,omitempty"` //optional	Number of seconds that Singularity waits for this service to become healthy (for it to download artifacts, start running, and optionally pass health
 }
 
 // SingularityDeployWithLB contains requird and optional parameter to configure
@@ -332,12 +367,12 @@ type SingularityDeployWithLB struct {
 }
 
 type SingularityRunNowRequest struct {
-	SingularityDeployResources `json:"resources"` // optional	Override the resources from the active deploy for this run
-	RunID                      string             `json:"runId"`            // optional	An id to associate with this request which will be associated with the corresponding launched tasks
-	SkipHealthchecks           bool               `json:"skipHealthchecks"` // 	optional	If set to true, healthchecks will be skipped for this task run
-	CommandLineArgs            []string           `json:"commandLineArgs"`  //	optional	Command line arguments to be passed to the task
-	Message                    string             `json:"message"`          //optional	A message to show to users about why this action was taken
-	RunAt                      int64              `json:"runAt"`            //long	optional	Schedule this task to run at a specified time
+	SingularityDeployResources `json:"resources,omitempty"` // optional	Override the resources from the active deploy for this run
+	RunID                      string                       `json:"runId,omitempty"`            // optional	An id to associate with this request which will be associated with the corresponding launched tasks
+	SkipHealthchecks           bool                         `json:"skipHealthchecks,omitempty"` // 	optional	If set to true, healthchecks will be skipped for this task run
+	CommandLineArgs            []string                     `json:"commandLineArgs,omitempty"`  //	optional	Command line arguments to be passed to the task
+	Message                    string                       `json:"message,omitempty"`          //optional	A message to show to users about why this action was taken
+	RunAt                      int64                        `json:"runAt,omitEmpty"`            //long	optional	Schedule this task to run at a specified time
 }
 
 // SingularityExpiringPause contains information of a existing

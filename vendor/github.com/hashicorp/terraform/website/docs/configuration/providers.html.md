@@ -110,6 +110,16 @@ This special argument applies to _all_ providers.
 view the specified version constraints for all providers used in the
 current configuration.
 
+The `version` attribute value may either be a single explicit version or
+a version constraint expression. Constraint expressions use the following
+syntax to specify a _range_ of versions that are acceptable:
+
+* `>= 1.2.0`: version 1.2.0 or newer
+* `<= 1.2.0`: version 1.2.0 or older
+* `~> 1.2.0`: any non-beta version `>= 1.2.0` and `< 1.3.0`, e.g. `1.2.X`
+* `~> 1.2`: any non-beta version `>= 1.2.0` and `< 2.0.0`, e.g. `1.X.Y`
+* `>= 1.0.0, <= 2.0.0`: any version between 1.0.0 and 2.0.0 inclusive
+
 When `terraform init` is re-run with providers already installed, it will
 use an already-installed provider that meets the constraints in preference
 to downloading a new version. To upgrade to the latest acceptable version
@@ -210,7 +220,7 @@ host operating system:
 `terraform init` will search this directory for additional plugins during
 plugin initialization.
 
-The naming scheme for provider plugins is `terraform-provider-NAME-vX.Y.Z`,
+The naming scheme for provider plugins is `terraform-provider-NAME_vX.Y.Z`,
 and Terraform uses the name to understand the name and version of a particular
 provider binary. Third-party plugins will often be distributed with an
 appropriate filename already set in the distribution archive so that it can
@@ -239,6 +249,9 @@ For example:
 
 plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"
 ```
+
+This directory must already exist before Terraform will cache plugins;
+Terraform will not create the directory itself.
 
 Please note that on Windows it is necessary to use forward slash separators
 (`/`) rather than the conventional backslash (`\`) since the configuration
