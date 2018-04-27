@@ -79,8 +79,14 @@ func (c *Client) GetRequestByID(id string) (HTTPResponse, error) {
 		return HTTPResponse{}, fmt.Errorf("Get Singularity request not found: %v", err)
 	}
 
+	var data Request
+	err = c.Rest.JSONUnmarshal(res.Body(), &data)
+	if err != nil {
+		return HTTPResponse{}, fmt.Errorf("Parse Singularity request error: %v", err)
+	}
 	return HTTPResponse{
 		RestyResponse: res,
+		Body:          data,
 	}, nil
 }
 
@@ -179,7 +185,10 @@ func (r *SingularityRequest) Create(c *Client) (HTTPResponse, error) {
 	}
 
 	var data Request
-	err = c.Rest.JSONUnmarshal(res.Body(), data)
+	err = c.Rest.JSONUnmarshal(res.Body(), &data)
+	if err != nil {
+		return HTTPResponse{}, fmt.Errorf("Parse Singularity create request error: %v", err)
+	}
 
 	return HTTPResponse{
 		RestyResponse: res,
@@ -326,7 +335,8 @@ func NewDeployRequest() DeployRequest {
 // AttachRequest accepts a Singularity Request object and use this request data for this deploy
 // , and update the request on successful deploy.
 func (r *SingularityDeployRequest) AttachRequest(s Request) DeployRequest {
-	r.SingularityRequest = s.Get()
+	req := s.Get()
+	r.SingularityRequest = &req
 	return r
 }
 

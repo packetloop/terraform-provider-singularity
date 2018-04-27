@@ -122,7 +122,6 @@ func ExampleNewDeployRequest() {
 		SetResources(resource).
 		Build()
 	newdeploy, err := singularity.NewDeployRequest().
-		AttachRequest(res.Body).
 		AttachDeploy(deploy).
 		Build().
 		Create(client)

@@ -53,3 +53,19 @@ func validateRequestState(v interface{}, k string) (ws []string, errors []error)
 	}
 	return
 }
+
+func validateDockerNetwork(v interface{}, k string) (ws []string, errors []error) {
+	validTypes := map[string]struct{}{
+		// Since Singularity expects uppercase of these values and to make this resource
+		// simpler, therefore just use upppercase.
+		"BRIDGE": {},
+	}
+
+	value := v.(string)
+
+	if _, ok := validTypes[value]; !ok {
+		errors = append(errors, fmt.Errorf(
+			"%q must be one of ['BRIDGE']", k))
+	}
+	return
+}
