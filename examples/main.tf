@@ -17,11 +17,6 @@ resource "singularity_request" "lenfree-run" {
   instances    = 5
 }
 
-resource "singularity_request" "lenfree-demand" {
-  request_id   = "lenfree-ondemand-2"
-  request_type = "ON_DEMAND"
-}
-
 resource "singularity_request" "lenfree-scheduled" {
   request_id             = "lenfree-test-scheduled"
   request_type           = "SCHEDULED"
@@ -43,11 +38,16 @@ resource "singularity_request" "lenfree-worker" {
   instances    = 2
 }
 
+resource "singularity_request" "lenfree-demand" {
+  request_id   = "lenfree-ondemand-2"
+  request_type = "ON_DEMAND"
+}
+
 resource "singularity_docker_deploy" "test-deploy" {
   deploy_id        = "mydeploy"
   force_pull_image = false
   network          = "bridge"
-  image            = "arbornetworks-docker-docker.bintray.io/aws-cli_0.2.0:18da34d"
+  image            = "golang:latest"
   cpu              = 2
   memory           = 128
   command          = "bash"
