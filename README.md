@@ -1,6 +1,27 @@
 terraform-provider-singularity
-------------------------------
+===============================
 
 A terraform provider to manage Mesos hubspot/Singularity objects.
 
-[ STATUS: WIP ]
+Usage:
+------
+
+```bash
+resource "singularity_request" "lenfree-demand" {
+  request_id   = "sample-request"
+  request_type = "ON_DEMAND"
+}
+
+resource "singularity_docker_deploy" "test-deploy" {
+  deploy_id        = "mydeploy"
+  force_pull_image = false
+  network          = "bridge"
+  image            = "golang:latest"
+  cpu              = 2
+  memory           = 128
+  command          = "bash"
+  args             = ["-xc", "date"]
+  request_id       = "${singularity_request.lenfree-demand.id}"
+}
+
+More examples can be found in examples/main.tf.
