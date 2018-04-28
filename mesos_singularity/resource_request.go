@@ -52,6 +52,24 @@ func resourceRequest() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateRequestState,
 			},
+			"deploy": &schema.Schema{
+				Type:       schema.TypeSet,
+				Optional:   true,
+				Deprecated: "Since the API Gateway usage plans feature was launched on August 11, 2016, usage plans are now required to associate an API key with an API stage",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"rest_api_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						"stage_name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -61,10 +79,6 @@ func resourceRequestCreate(d *schema.ResourceData, m interface{}) error {
 	id := d.Get("request_id").(string)
 	d.SetId(id)
 	return createRequest(d, m)
-}
-
-func clientConn(m interface{}) *singularity.Client {
-	return m.(*Conn).sclient
 }
 
 func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e error) {
@@ -87,7 +101,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("request_id").(string))
 	numRetriesOnFailure := int64(d.Get("num_retries_on_failure").(int))
 	cronFormat := d.Get("schedule").(string)
-	scheduleType := strings.ToLower(d.Get("schedule_type").(string))
+	scheduleType := strings.ToUpper(d.Get("schedule_type").(string))
 	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
 
@@ -99,21 +113,25 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	log.Printf("Singularity request  '%s' is being provisioned...", id)
 	if requestType == "run_once" {
 		resp, err := singularity.NewRequest(singularity.RUN_ONCE, id).
-			SetInstances(instances).Create(clientConn(m))
+			SetInstances(instances).
+			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "scheduled" {
-		req, err := singularity.NewRequest(singularity.SCHEDULED, id).
-			SetNumRetriesOnFailures(numRetriesOnFailure).
-			SetSchedule(cronFormat)
-		if err != nil {
-			return fmt.Errorf("cronFormat invalid: %v", err)
-		}
-		s, err := req.SetScheduleType(scheduleType)
+		req := singularity.NewRequest(singularity.SCHEDULED, "")
+		_, err := req.SetScheduleType(scheduleType)
 		if err != nil {
 			return fmt.Errorf("scheduleType invalid: %v", err)
 		}
-		resp, err := s.Create(clientConn(m))
+		_, err = req.SetSchedule(cronFormat)
+		if err != nil {
+			return fmt.Errorf("cronFormat invalid: %v", err)
+		}
+		resp, err := req.SetNumRetriesOnFailures(numRetriesOnFailure).
+			SetID(id).
+			SetInstances(instances).
+			Create(clientConn(m))
+
 		if err != nil {
 			return fmt.Errorf("Create new scheduled type request error %v", err)
 		}
@@ -163,7 +181,7 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 	if r.RestyResponse.StatusCode() == 404 {
-		return fmt.Errorf("%v", r.RestyResponse.Status())
+		return fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
 	return nil
 }
@@ -193,19 +211,24 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceRequestDelete(d *schema.ResourceData, m interface{}) error {
-	// TOOD: Replace harcoded false with actual deleteFromLoadbalancer value if
-	// we start using it. Otherwise, keep it simple.
-	req := singularity.NewDeleteRequest((d.Id()),
-		"Terraform detected changes",
-		"Terraform update",
-		false)
-	resp, err := singularity.DeleteRequest(clientConn(m), req)
-	if err != nil {
-		return err
+	a := deleteRequest(d.Id())
+	return a(d, m)
+}
+
+func deleteRequest(id string) (f func(d *schema.ResourceData, m interface{}) error) {
+	return func(d *schema.ResourceData, m interface{}) error {
+		req := singularity.NewDeleteRequest(id,
+			"Terraform detected changes",
+			"Terraform update",
+			false)
+		resp, err := singularity.DeleteRequest(clientConn(m), req)
+		if err != nil {
+			return err
+		}
+		if resp.RestyResponse.StatusCode() == 404 {
+			return fmt.Errorf("Singularity request ID %v not found", id)
+		}
+		d.SetId("")
+		return nil
 	}
-	if resp.RestyResponse.StatusCode() == 404 {
-		return fmt.Errorf("Singularity request ID %v not found", d.Id())
-	}
-	d.SetId("")
-	return nil
 }

@@ -10,19 +10,19 @@ type SingularityRequest struct {
 	RequestType                                     string            `json:"requestType"`
 	Schedule                                        string            `json:"schedule,omitempty"`
 	ScheduleType                                    string            `json:"scheduleType,omitempty"`
-	HideEvenNumberAcrossRacksHint                   bool              `json:"hideEventNumerAcrossRacksHint"`
+	HideEvenNumberAcrossRacksHint                   bool              `json:"hideEventNumerAcrossRacksHint,omitempty"`
 	TaskExecutionTimeLimitMillis                    int               `json:"taskExecutionTimeLimitMills"`
 	TaskLogErrorRegexCaseSensitive                  bool              `json:"taskLogErrorRegexCaseSensitive"`
 	SkipHealthchecks                                bool              `json:"skipHealthchecks"`
 	WaitAtLeastMillisAfterTaskFinishesForReschedule int               `json:"waitAtleastMillisAfterTaskFinishesForReschedule"`
 	TaskPriorityLevel                               int               `json:"taksPriorityLevel"`
 	RackAffinity                                    []string          `json:"RackAffinity"`
-	MaxTasksPerOffer                                int               `json:"maxTasksPerOffer"`
+	MaxTasksPerOffer                                int               `json:"maxTasksPerOffer,omitempty"`
 	BounceAfterScale                                bool              `json:"bounceAfterScale"`
 	RackSensitive                                   bool              `json:"rackSensitive"`
 	AllowedSlaveAttributes                          map[string]string `json:"allowedSlaveAttributes"`
 	Owners                                          []string          `json:"owners"`
-	RequiredRole                                    string            `json:"requiredRole"`
+	RequiredRole                                    string            `json:"requiredRole,omitempty"`
 	ScheduledExpectedRuntimeMillis                  int               `json:"scheduledExpectedRuntimeMillis"`
 	RequiredSlaveAttributes                         map[string]string `json:"requiredSlaveAttributes"`
 	LoadBalanced                                    bool              `json:"loadBalanced,omitempty"`
@@ -50,9 +50,16 @@ type RequestDeployState struct {
 // This have a JSON response of /api/requests/request/ID.
 type Request struct {
 	SingularityRequest `json:"request"`
-	RequestDeployState `json:"requestDeployState"`
-	State              string `json:"state"`
-	ActiveDeploy       struct {
+	RequestDeployState struct {
+		ActiveDeploy struct {
+			DeployID  string `json:"deployId"`
+			RequestID string `json:"requestId"`
+			Timestamp int64  `json:"timestamp"`
+		} `json:"activeDeploy"`
+		RequestID string `json:"requestId"`
+	} `json:"requestDeployState"`
+	State        string `json:"state"`
+	ActiveDeploy struct {
 		Arguments                  []string `json:"arguments"`
 		Command                    string   `json:"command"`
 		ContainerInfo              `json:"containerInfo"`
@@ -62,6 +69,17 @@ type Request struct {
 		SingularityDeployResources `json:"resources"`
 		Uris                       []string `json:"uris"`
 	} `json:"activeDeploy"`
+	RunImmediately struct {
+		Resources struct {
+			Cpus     int64 `json:"cpus"`
+			DiskMb   int64 `json:"diskMb"`
+			MemoryMb int64 `json:"memoryMb"`
+			NumPorts int64 `json:"numPorts"`
+		} `json:"resources"`
+		RunAt int64  `json:"runAt"`
+		RunID string `json:"runId"`
+	} `json:"runImmediately"`
+	SkipHealthchecksOnDeploy bool `json:"skipHealthchecksOnDeploy"`
 }
 
 // Requests is a slice of Request.
@@ -94,11 +112,11 @@ type ContainerInfo struct {
 
 //https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerInfo
 type DockerInfo struct {
-	Parameters                 map[string]string `json:"parameters,omitempty"`
-	ForcePullImage             bool              `json:"forcePullImage,omitempty"`
-	SingularityDockerParameter `json:"dockerParameters,omitEmpty"`
-	Privileged                 bool   `json:"privileged,omitEmpty"`
-	Network                    string `json:"network,omitEmpty"`
+	Parameters                  map[string]string            `json:"parameters,omitempty"`
+	ForcePullImage              bool                         `json:"forcePullImage,omitempty"`
+	SingularityDockerParameters []SingularityDockerParameter `json:"dockerParameters,omitEmpty"`
+	Privileged                  bool                         `json:"privileged,omitEmpty"`
+	Network                     string                       `json:"network,omitEmpty"`
 	//network	com.hubspot.mesos.SingularityDockerNetworkType	optional	Docker netowkr type. Value can be BRIDGE, HOST, or NONE
 	//portMappings	Array[SingularityDockerPortMapping]	optional	List of port mappings
 	Image string `json:"image"`
@@ -295,9 +313,9 @@ type SingularityDeploy struct {
 	RequestID                             string                              `json:"requestId"`                          // required	Singularity Request Id which is associated with this deploy.
 	DeployStepWaitTimeMs                  int                                 `json:"deployStepWaitTimeMs,omitempty"`     // optional	wait this long between deploy steps
 	SkipHealthchecksOnDeploy              bool                                `json:"skipHealthchecksOnDeploy,omitempty"` //optional	Allows skipping of health checks when deploying.
-	MesosLabels                           []SingularityMesosTaskLabel         `json:"mesosLabels,omitempty"`              //Array[SingularityMesosTaskLabel]	optional	Labels for all tasks associated with this deploy
+	MesosLabels                           *[]SingularityMesosTaskLabel        `json:"mesosLabels,omitempty"`              //Array[SingularityMesosTaskLabel]	optional	Labels for all tasks associated with this deploy
 	Command                               string                              `json:"command,omitempty"`                  //optional	Command to execute for this deployment.
-	ExecutorData                          `json:"executorData,omitempty"`     //	optional	Executor specific information
+	*ExecutorData                         `json:"executorData,omitempty"`     //	optional	Executor specific information
 	Shell                                 bool                                `json:"shell,omitempty"`                                 //optional	Override the shell property on the mesos task
 	Timestamp                             int64                               `json:"timestamp,omitempty"`                             //long	optional	Deploy timestamp.
 	DeployInstanceCountPerStep            int                                 `json:"deployInstanceCountPerStep,omitempty"`            //	optional	deploy this many instances at a time
@@ -496,6 +514,8 @@ type SingularityRequestParent struct {
 		Arguments              []string    `json:"arguments"`
 		TaskEnv                interface{} `json:"taskEnv"` //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
 		AutoAdvanceDeploySteps bool        `json:"autoAdvanceDeploySteps"`
+		ID                     string      `json:"id"`
+		Command                string      `json:"command"`
 	} `json:"pendingDeploy"`
 	ActiveDeploy struct {
 		CustomExecutorID           string `json:"customExecutorId"`
@@ -508,14 +528,23 @@ type SingularityRequestParent struct {
 		Arguments              []string    `json:"arguments"`
 		TaskEnv                interface{} `json:"taskEnv"` //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
 		AutoAdvanceDeploySteps bool        `json:"autoAdvanceDeploySteps"`
+		ID                     string      `json:"id"`
+		Command                string      `json:"command"`
 	} `json:"activeDeploy"`
 	SingularityExpiringPause  `json:"expiringPause"`
 	SingularityExpiringBounce `json:"expiringBounce"`
 	SingularityRequest        `json:"request"`
 	SingularityPendingDeploy  `json:"pendingDeployState"`
 	SingularityExpiringScale  `json:"expiringScale"`
-	SingularityDeployState    `json:"requestDeployState"`
-	State                     string `json:"state"`
+	RequestDeployState        struct {
+		ActiveDeploy struct {
+			DeployID  string `json:"deployId"`
+			RequestID string `json:"requestId"`
+			Timestamp int64  `json:"timestamp"`
+		} `json:"activeDeploy"`
+		RequestID string `json:"requestId"`
+	} `json:"requestDeployState"`
+	State string `json:"state"`
 }
 
 // SingularityDeleteRequest contains HTTP body for a Delete Singularity Request. Please see below URL for
@@ -531,6 +560,6 @@ type SingularityDeleteRequest struct {
 type SingularityDeployRequest struct {
 	UnpauseOnSuccessfulDeploy bool                    //optional	If deploy is successful, also unpause the request
 	SingularityDeploy         `json:"deploy"`         // required	The Singularity deploy object, containing all the required details about the Deploy
-	SingularityRequest        `json:"updatedRequest"` // optional	use this request data for this deploy, and update the request on successful deploy
+	*SingularityRequest       `json:"updatedRequest"` // optional	use this request data for this deploy, and update the request on successful deploy
 	Message                   string                  //optional	A message to show users about this deploy (metadata)
 }

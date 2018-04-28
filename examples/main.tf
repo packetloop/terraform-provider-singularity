@@ -1,5 +1,5 @@
 provider "singularity" {
-    host = "localhost/singularity"
+  host = "localhost/singularity"
 }
 
 resource "singularity_request" "my-server" {
@@ -8,6 +8,7 @@ resource "singularity_request" "my-server" {
   num_retries_on_failure = 3
   schedule               = "0 7 * * *"
   schedule_type          = "CRON"
+  instances              = 1
 }
 
 resource "singularity_request" "lenfree-run" {
@@ -27,6 +28,7 @@ resource "singularity_request" "lenfree-scheduled" {
   num_retries_on_failure = 3
   schedule               = "0 7 * * *"
   schedule_type          = "CRON"
+  instances              = 2
 }
 
 resource "singularity_request" "lenfree-service" {
@@ -39,4 +41,16 @@ resource "singularity_request" "lenfree-worker" {
   request_id   = "lenfree-test-worker"
   request_type = "WORKER"
   instances    = 2
+}
+
+resource "singularity_docker_deploy" "test-deploy" {
+  deploy_id        = "mydeploy"
+  force_pull_image = false
+  network          = "bridge"
+  image            = "arbornetworks-docker-docker.bintray.io/aws-cli_0.2.0:18da34d"
+  cpu              = 2
+  memory           = 128
+  command          = "bash"
+  args             = ["-xc", "date"]
+  request_id       = "${singularity_request.lenfree-demand.id}"
 }

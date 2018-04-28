@@ -32,8 +32,8 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"singularity_request": resourceRequest(),
-			//"singularity_deploy": resourceDeploy(),
+			"singularity_request":       resourceRequest(),
+			"singularity_docker_deploy": resourceDockerDeploy(),
 		},
 
 		/* DataSources placeholder
