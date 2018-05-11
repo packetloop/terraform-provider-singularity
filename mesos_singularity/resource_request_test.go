@@ -171,13 +171,13 @@ func testCheckSingularityRequestDestroy(state *terraform.State) error {
 		client := testAccProvider.Meta().(*Conn).sclient
 		data, err := client.GetRequestByID(requestID)
 		if err != nil {
-			return nil
+			return err
 		}
 		// If request_id does not exists, it gets a response status code 404 Not Found.
 		if data.RestyResponse.StatusCode() != 404 {
 			continue
 		}
-		return fmt.Errorf("Request id '%s' still exists", requestID)
+		return fmt.Errorf("Request id '%s' still exists, %v", requestID, data.RestyResponse.StatusCode())
 	}
 
 	return nil

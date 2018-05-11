@@ -61,7 +61,15 @@ func resourceDockerDeploy() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"envs": envSchema(),
 		},
+	}
+}
+
+func envSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeMap,
+		Optional: true,
 	}
 }
 
@@ -107,6 +115,12 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		args = append(args, i.(string))
 	}
 
+	env := make(map[string]string)
+	envs := d.Get("envs").(map[string]interface{})
+	for k, v := range envs {
+		env[k] = v.(string)
+	}
+
 	d.SetId(id)
 
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
@@ -133,6 +147,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		SetArgs(args...).
 		SetRequestID(requestID).
 		SetSkipHealthchecksOnDeploy(true).
+		SetEnv(env).
 		SetResources(resource).
 		Build()
 
@@ -191,6 +206,7 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("memory") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
+		d.HasChange("env") ||
 		d.HasChange("network") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather

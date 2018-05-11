@@ -57,6 +57,10 @@ resource "singularity_docker_deploy" "foo" {
 			command          = "bash"
 			args             = ["-xc", "date"]
 			request_id       = "${singularity_request.foo.id}"
+			envs {
+				"MYENV" = "test"
+				"NAME"  = "lenfree"
+			}
 }
 `
 
