@@ -23,7 +23,7 @@ resource "singularity_request" "lenfree-scheduled" {
   num_retries_on_failure = 3
   schedule               = "0 7 * * *"
   schedule_type          = "CRON"
-  instances              = 2
+  instances              = 1
 }
 
 resource "singularity_request" "lenfree-service" {
@@ -44,13 +44,18 @@ resource "singularity_request" "lenfree-demand" {
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
-  deploy_id        = "mydeploy"
+  deploy_id        = "mydeploy4"
   force_pull_image = false
   network          = "bridge"
   image            = "golang:latest"
   cpu              = 2
   memory           = 128
   command          = "bash"
-  args             = ["-xc", "date"]
+  args             = ["-xc", "env"]
   request_id       = "${singularity_request.lenfree-demand.id}"
+
+  envs {
+    MYENV = "Test"
+    OWNER = "lenfree"
+  }
 }
