@@ -9,7 +9,7 @@ vendor:
 .PHONY: dep
 dep:
 ifndef HOST
-$(error HOST is not set)
+	$(error HOST is not set)
 endif
 
 .PHONY: build

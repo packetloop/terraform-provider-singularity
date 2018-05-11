@@ -175,8 +175,9 @@ func testCheckSingularityRequestDestroy(state *terraform.State) error {
 		}
 		// If request_id does not exists, it gets a response status code 404 Not Found.
 		if data.RestyResponse.StatusCode() != 404 {
-			return fmt.Errorf("Request id '%s' still exists", requestID)
+			continue
 		}
+		return fmt.Errorf("Request id '%s' still exists", requestID)
 	}
 
 	return nil

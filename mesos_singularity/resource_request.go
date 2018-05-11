@@ -91,7 +91,8 @@ func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e err
 		return false, err
 	}
 	if r.RestyResponse.StatusCode() == 404 {
-		return false, fmt.Errorf("%v", r.RestyResponse.Status())
+		//return false, fmt.Errorf("%v", r.RestyResponse.Status())
+		return false, nil
 	}
 	return true, nil
 
@@ -104,8 +105,6 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	scheduleType := strings.ToUpper(d.Get("schedule_type").(string))
 	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
-
-	d.SetId(id)
 
 	// Singularity expects uppercase of these values and in our validator,
 	// we expect only uppercase to make our resource simpler. Having said
@@ -126,6 +125,10 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 		_, err = req.SetSchedule(cronFormat)
 		if err != nil {
 			return fmt.Errorf("cronFormat invalid: %v", err)
+		}
+
+		if instances > 1 {
+			return fmt.Errorf("Scheduled request can only have instance of: %d", 1)
 		}
 		resp, err := req.SetNumRetriesOnFailures(numRetriesOnFailure).
 			SetID(id).
@@ -194,6 +197,7 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("request_type") ||
 		d.HasChange("num_retries_on_failure") ||
 		d.HasChange("schedule") ||
+		d.HasChange("instances") ||
 		d.HasChange("schedule_type") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather
