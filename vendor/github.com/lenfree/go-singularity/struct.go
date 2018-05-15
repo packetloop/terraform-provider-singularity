@@ -321,7 +321,7 @@ type SingularityDeploy struct {
 	DeployInstanceCountPerStep            int                                 `json:"deployInstanceCountPerStep,omitempty"`            //	optional	deploy this many instances at a time
 	ConsiderHealthyAfterRunningForSeconds int64                               `json:"considerHealthyAfterRunningForSeconds,omitempty"` //	optional	Number of seconds that a service must be healthy to consider the deployment to be successful.
 	MaxTaskRetries                        int                                 `json:"maxTaskRetries,omitempty"`                        // optional	allowed at most this many failed tasks to be retried before failing the deploy
-	SingularityRunNowRequest              `json:"runImmediately,omitempty"`   // optional	Settings used to run this deploy immediately
+	*SingularityRunNowRequest             `json:"runImmediately,omitempty"`   // optional	Settings used to run this deploy immediately
 	CustomExecutorCmd                     string                              `json:"customExecutorCmd,omitempty"` // optional	Custom Mesos executor
 	Env                                   map[string]string                   `json:"env,omitempty"`               //	optional	Map of environment variable definitions.
 	// SingularityDeployResources            `json:"customExecutorResources"`    // com.hubspot.mesos.Resources	optional	Resources to allocate for custom mesos executor

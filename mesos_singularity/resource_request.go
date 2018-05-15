@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-singularity"
@@ -154,6 +155,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	}
 	if requestType == "worker" {
 		resp, err := singularity.NewRequest(singularity.WORKER, id).
+			SetInstances(instances).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -208,6 +210,9 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		if err != nil {
 			return err
 		}
+		// This is a workaround when Singularity delete existing object. Takes a few seconds
+		// normally.
+		time.Sleep(5 * time.Second)
 		d.Partial(false)
 		return resourceRequestCreate(d, m)
 	}

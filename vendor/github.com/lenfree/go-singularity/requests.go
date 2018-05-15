@@ -610,7 +610,7 @@ func (d *SingularityDeploy) SetConsiderHealthyAfterRunningForSeconds(t int64) De
 // SetSingularityRunNowRequest accepts a SinguarltiyRunNowRequest object. Settings used
 // to run this deploy immediately. This is optional.
 func (d *SingularityDeploy) SetSingularityRunNowRequest(r SingularityRunNowRequest) Deploy {
-	d.SingularityRunNowRequest = r
+	d.SingularityRunNowRequest = &r
 	return d
 }
 

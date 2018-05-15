@@ -93,7 +93,7 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	if r.RestyResponse.StatusCode() == 404 {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
-	if (r.Body.ActiveDeploy.ID) == "" {
+	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
 	return true, nil
@@ -165,11 +165,10 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 
 func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HTTPResponse, err error) error {
 	log.Printf("[TRACE] HTTP Response %v", r.RestyResponse)
-
 	if err != nil {
 		return fmt.Errorf("Create Singularity deploy error: %v", err)
 	}
-	if r.RestyResponse.StatusCode() <= 200 && r.RestyResponse.StatusCode() >= 299 {
+	if r.RestyResponse.StatusCode() < 200 && r.RestyResponse.StatusCode() > 299 {
 		return fmt.Errorf("Create Singularity deploy error %v: %v", r.RestyResponse.StatusCode(), err)
 	}
 	return resourceDockerDeployRead(d, m)
@@ -182,15 +181,16 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
 	r, err := client.GetRequestByID(d.Get("request_id").(string))
+	log.Printf("[TRACE] HTTP Response %v", r.Body)
 
 	if err != nil {
 		return err
 	}
 	if r.RestyResponse.StatusCode() == 404 {
-		return fmt.Errorf("%v", string(r.RestyResponse.Body()))
+		return fmt.Errorf("status code error %v", string(r.RestyResponse.Body()))
 	}
-	if (r.Body.ActiveDeploy.ID) == "" {
-		return fmt.Errorf("%v", string(r.RestyResponse.Body()))
+	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
+		return fmt.Errorf("activedeploy empty %v", string(r.RestyResponse.Body()))
 	}
 	return nil
 }
