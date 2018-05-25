@@ -3,6 +3,8 @@ terraform-provider-singularity
 
 A terraform provider to manage Mesos hubspot/Singularity objects.
 
+[![CircleCI](https://circleci.com/gh/packetloop/terraform-provider-singularity.svg?style=svg)](https://circleci.com/gh/packetloop/terraform-provider-singularity)
+
 Usage:
 ------
 

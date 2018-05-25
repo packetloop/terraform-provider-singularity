@@ -6,13 +6,14 @@ test: dep env
 	HOST=$(HOST) TF_ACC=$(TF_ACC) go test -race -cover -v ./...
 
 .PHONY: vendor
-vendor:
+vendor: dep
 	dep ensure
 
 .PHONY: dep
 dep:
 	go get github.com/tcnksm/ghr
 	go get github.com/mitchellh/gox
+	go get github.com/golang/dep/cmd/dep
 
 .PHONY: env
 env:
