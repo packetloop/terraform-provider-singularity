@@ -22,6 +22,7 @@ func resourceRequest() *schema.Resource {
 			"request_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"request_type": &schema.Schema{
 				Type:         schema.TypeString,
@@ -32,44 +33,35 @@ func resourceRequest() *schema.Resource {
 			"num_retries_on_failure": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
+				Default:  3,
+				ForceNew: true,
 			},
 			"schedule": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 			"schedule_type": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validateRequestScheduleType,
+				ForceNew:     true,
 			},
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
+				ForceNew: true,
+			},
+			"max_tasks_per_offer": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
 			},
 			"state": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ForceNew:     true,
 				ValidateFunc: validateRequestState,
-			},
-			"deploy": &schema.Schema{
-				Type:       schema.TypeSet,
-				Optional:   true,
-				Deprecated: "Since the API Gateway usage plans feature was launched on August 11, 2016, usage plans are now required to associate an API key with an API stage",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"rest_api_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"stage_name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -83,7 +75,6 @@ func resourceRequestCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e error) {
-
 	// Exists - This is called to verify a resource still exists. It is called prior to Read,
 	// and lowers the burden of Read to be able to assume the resource exists.
 	client := clientConn(m)
@@ -106,6 +97,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	scheduleType := strings.ToUpper(d.Get("schedule_type").(string))
 	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
+	maxTasksPerOffer := d.Get("max_tasks_per_offer").(int)
 
 	// Singularity expects uppercase of these values and in our validator,
 	// we expect only uppercase to make our resource simpler. Having said
@@ -134,6 +126,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 		resp, err := req.SetNumRetriesOnFailures(numRetriesOnFailure).
 			SetID(id).
 			SetInstances(instances).
+			SetMaxTasksPerOffer(maxTasksPerOffer).
 			Create(clientConn(m))
 
 		if err != nil {
@@ -144,18 +137,21 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	if requestType == "service" {
 		resp, err := singularity.NewRequest(singularity.SERVICE, id).
 			SetInstances(instances).
+			SetMaxTasksPerOffer(maxTasksPerOffer).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "on_demand" {
 		resp, err := singularity.NewRequest(singularity.ON_DEMAND, id).
 			SetInstances(instances).
+			SetMaxTasksPerOffer(maxTasksPerOffer).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "worker" {
 		resp, err := singularity.NewRequest(singularity.WORKER, id).
 			SetInstances(instances).
+			SetMaxTasksPerOffer(maxTasksPerOffer).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -200,7 +196,8 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("num_retries_on_failure") ||
 		d.HasChange("schedule") ||
 		d.HasChange("instances") ||
-		d.HasChange("schedule_type") {
+		d.HasChange("schedule_type") ||
+		d.HasChange("max_tasks_pe_offer") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather
 		// than delete and add.

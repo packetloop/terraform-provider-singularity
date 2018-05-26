@@ -1,5 +1,5 @@
 provider "singularity" {
-  host = "localhost/singularity"
+  host = "localhost"
 }
 
 resource "singularity_request" "my-server" {
@@ -39,8 +39,10 @@ resource "singularity_request" "lenfree-worker" {
 }
 
 resource "singularity_request" "lenfree-demand" {
-  request_id   = "lenfree-ondemand-2"
-  request_type = "ON_DEMAND"
+  request_id          = "lenfree-ondemand-2"
+  request_type        = "ON_DEMAND"
+  instances           = 2
+  max_tasks_per_offer = 2
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
@@ -57,5 +59,13 @@ resource "singularity_docker_deploy" "test-deploy" {
   envs {
     MYENV = "Test"
     OWNER = "lenfree"
+  }
+
+  port_mapping {
+    host_port           = 0
+    container_port      = 10001
+    container_port_type = "LITERAL"
+    host_port_type      = "FROM_OFFER"
+    protocol            = "tcp"
   }
 }

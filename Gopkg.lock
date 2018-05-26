@@ -249,7 +249,7 @@
   branch = "master"
   name = "github.com/lenfree/go-singularity"
   packages = ["."]
-  revision = "96c67735b492b67a3b36e85d712fc397926114b6"
+  revision = "4ad0bc7da2d2ab6bc3815c38f3fac052e0925797"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"

@@ -116,6 +116,7 @@ type ServiceRequest interface {
 	SetInstances(int64) ServiceRequest
 	SetSchedule(string) (ServiceRequest, error)
 	SetScheduleType(string) (ServiceRequest, error)
+	SetMaxTasksPerOffer(int) ServiceRequest
 	SetNumRetriesOnFailures(int64) ServiceRequest
 }
 
@@ -167,6 +168,13 @@ func (r *SingularityRequest) SetSchedule(s string) (ServiceRequest, error) {
 // and set shedule for this request.
 func (r *SingularityRequest) SetInstances(i int64) ServiceRequest {
 	r.Instances = i
+	return r
+}
+
+// SetMaxTasksPerOffer accepts a cron schedule format as string
+// and set shedule for this request.
+func (r *SingularityRequest) SetMaxTasksPerOffer(i int) ServiceRequest {
+	r.MaxTasksPerOffer = i
 	return r
 }
 

@@ -240,10 +240,11 @@ func TestNewRunOnceSet(t *testing.T) {
 	var data = []struct {
 		expectedID        string
 		expectedType      string
+		instances         int64
 		expectedInstances int64
 	}{
-		{"test-id", "RUN_ONCE", 0},
-		{"test-id-2", "RUN_ONCE", 2},
+		{"test-id", "RUN_ONCE", 0, 0},
+		{"test-id-2", "RUN_ONCE", 2, 2},
 	}
 
 	for _, tt := range data {
@@ -255,7 +256,10 @@ func TestNewRunOnceSet(t *testing.T) {
 			t.Errorf("Got %v, expected %v", req.Instances, tt.expectedInstances)
 		}
 		if req.RequestType != tt.expectedType {
-			t.Errorf("Got %s, expected %s", req.RequestType, tt.expectedType)
+			t.Errorf("SetInstances(%v): expected %v, got %v",
+				tt.instances,
+				tt.expectedInstances,
+				req.Instances)
 		}
 	}
 }
@@ -286,6 +290,30 @@ func TestNewRequestScale(t *testing.T) {
 		t.Errorf("Got %v, expected %v ",
 			req.SingularityScaleRequest.Incremental,
 			expectedIncrement)
+	}
+}
+
+func TestSetMaxTasksPerOffer(t *testing.T) {
+	var data = []struct {
+		expectedID               string
+		expectedType             string
+		maxTasksPerOffer         int
+		expectedMaxTasksPerOffer int
+	}{
+		{"test-id", "SERVICE", 3, 3},
+		{"service-123", "SERVICE", 3, 3},
+	}
+	for _, tt := range data {
+		req := NewRequest(RUN_ONCE, tt.expectedID).SetMaxTasksPerOffer(tt.maxTasksPerOffer).Get()
+		if req.ID != tt.expectedID {
+			t.Errorf("Got %s, expected %s", req.ID, tt.expectedID)
+		}
+		if req.MaxTasksPerOffer != tt.expectedMaxTasksPerOffer {
+			t.Errorf("SetMaxTasksPerOffer(%v): expected %v, got %v",
+				tt.maxTasksPerOffer,
+				tt.expectedMaxTasksPerOffer,
+				req.MaxTasksPerOffer)
+		}
 	}
 }
 

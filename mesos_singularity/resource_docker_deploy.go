@@ -24,8 +24,8 @@ func resourceDockerDeploy() *schema.Resource {
 			},
 			"request_id": &schema.Schema{
 				Type:     schema.TypeString,
-				ForceNew: true,
 				Required: true,
+				ForceNew: true,
 			},
 			"cpu": &schema.Schema{
 				Type:     schema.TypeFloat,
@@ -61,7 +61,44 @@ func resourceDockerDeploy() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"num_ports": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  true,
+			},
 			"envs": envSchema(),
+			"port_mapping": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_port": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"container_port": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"container_port_type": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validateSingularityPortMappingType,
+						},
+						"host_port_type": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validateSingularityPortMappingType,
+						},
+						"protocol": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validateSingularityPortProtocol,
+							Default:      "tcp",
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -99,6 +136,23 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	return true, nil
 
 }
+func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
+	var portMappings []singularity.DockerPortMapping
+	for _, lRaw := range configured {
+		data := lRaw.(map[string]interface{})
+
+		l := singularity.DockerPortMapping{
+			HostPort:          int64(data["host_port"].(int)),
+			ContainerPort:     int64(data["container_port"].(int)),
+			ContainerPortType: data["container_port_type"].(string),
+			Protocol:          data["protocol"].(string),
+			HostPortType:      data["host_port_type"].(string),
+		}
+
+		portMappings = append(portMappings, l)
+	}
+	return portMappings, nil
+}
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("deploy_id").(string))
@@ -107,20 +161,21 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	network := strings.ToUpper(d.Get("network").(string))
 	cpu := d.Get("cpu").(float64)
 	memory := d.Get("cpu").(float64)
+	numPorts := int64(d.Get("num_ports").(int))
 	forcePullImage := d.Get("force_pull_image").(bool)
 	command := d.Get("command").(string)
-	args2 := d.Get("args").([]interface{})
-	var args []string
-	for _, i := range args2 {
-		args = append(args, i.(string))
-	}
-
+	arguments := d.Get("args").([]interface{})
 	env := make(map[string]string)
 	envs := d.Get("envs").(map[string]interface{})
 	for k, v := range envs {
 		env[k] = v.(string)
 	}
 
+	portMappings, err := expandPortMappings(d.Get("port_mapping").(*schema.Set).List())
+
+	if int64(len(portMappings)) > numPorts {
+		return fmt.Errorf("Error: %s", "Resource num_ports shouldbe >= number of port_mapping")
+	}
 	d.SetId(id)
 
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
@@ -132,22 +187,39 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 			ForcePullImage: forcePullImage,
 			Network:        network,
 			Image:          image,
+			PortMappings:   portMappings,
 		},
 	}
 	resource := singularity.SingularityDeployResources{
 		Cpus:     cpu,
 		MemoryMb: memory,
+		NumPorts: numPorts,
 	}
+
 	dep := singularity.NewDeploy(id)
+
+	// Move this to a map function.
+	if len(arguments) > 0 {
+		var args []string
+		for _, i := range arguments {
+			args = append(args, i.(string))
+		}
+		dep = dep.SetArgs(args...)
+	}
+
+	if len(env) > 0 {
+		dep = dep.SetEnv(env)
+	}
+
 	containerInfo, err := dep.SetContainerInfo(info)
+
 	if err != nil {
 		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
+
 	deploy := containerInfo.SetCommand(command).
-		SetArgs(args...).
 		SetRequestID(requestID).
 		SetSkipHealthchecksOnDeploy(true).
-		SetEnv(env).
 		SetResources(resource).
 		Build()
 
@@ -155,16 +227,16 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		AttachDeploy(deploy).
 		Build().
 		Create(client)
+
 	if err != nil {
 		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
 
 	return checkDeployResponse(d, m, resp, err)
-
 }
 
 func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HTTPResponse, err error) error {
-	log.Printf("[TRACE] HTTP Response %v", r.RestyResponse)
+	log.Printf("[TRACE] check Deploy Response HTTP Response %v", r.RestyResponse)
 	if err != nil {
 		return fmt.Errorf("Create Singularity deploy error: %v", err)
 	}
@@ -181,7 +253,7 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
 	r, err := client.GetRequestByID(d.Get("request_id").(string))
-	log.Printf("[TRACE] HTTP Response %v", r.Body)
+	log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
 
 	if err != nil {
 		return err
@@ -208,14 +280,10 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("command") ||
 		d.HasChange("env") ||
 		d.HasChange("network") {
-		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
-		// TODO: Investigate whether we can just update existing request, rather
-		// than delete and add.
-		// Delete existing request and add if there are changes. I couldn't manage
-		// to find API doco to update existing request. Only for existing deploy.
-
+		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
 		d.Partial(false)
-		return resourceDockerDeployCreate(d, m)
+		// Singularity deploy is by design idempotent.
+		return createDockerDeploy(d, m)
 	}
 	return nil
 }
