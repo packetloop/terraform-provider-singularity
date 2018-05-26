@@ -85,15 +85,6 @@ type Request struct {
 // Requests is a slice of Request.
 type Requests []Request
 
-/*
-type SingularityDockerPortMapping struct {
-	hostPort	int	required	Port number, or index of port from offer on the host
-	containerPort	int	required	Port number, or index of port from offer within the container
-	containerPortType	SingularityPortMappingType	optional	Container port. Use the port number provided (LITERAL) or the dynamically allocated port at this index (FROM_OFFER) Allowable values: LITERAL, FROM_OFFER
-	protocol	string	optional	Protocol for binding the port. Default is tcp
-	hostPortType	SingularityPortMappingType	optional	Host port. Use the port number provided (LITERAL) or the dynamically allocated port at this index (FROM_OFFER) Allowable values: LITERAL, FROM_OFFER
-}
-*/
 type Docker struct {
 	ForcePullImage bool              `json:"forcePullImage,omitempty"`
 	Image          string            `json:"image,omitempty"`
@@ -116,10 +107,18 @@ type DockerInfo struct {
 	ForcePullImage              bool                         `json:"forcePullImage,omitempty"`
 	SingularityDockerParameters []SingularityDockerParameter `json:"dockerParameters,omitEmpty"`
 	Privileged                  bool                         `json:"privileged,omitEmpty"`
-	Network                     string                       `json:"network,omitEmpty"`
-	//network	com.hubspot.mesos.SingularityDockerNetworkType	optional	Docker netowkr type. Value can be BRIDGE, HOST, or NONE
-	//portMappings	Array[SingularityDockerPortMapping]	optional	List of port mappings
-	Image string `json:"image"`
+	Network                     string                       `json:"network,omitEmpty"` //Value can be BRIDGE, HOST, or NONE
+	Image                       string                       `json:"image"`
+	PortMappings                []DockerPortMapping          `json:"portMappings,omitempty"`
+}
+
+//https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerPortMapping
+type DockerPortMapping struct {
+	ContainerPort     int64  `json:"containerPort"`
+	ContainerPortType string `json:"containerPortType,omitempty"` //Allowable values: LITERAL, FROM_OFFER
+	HostPort          int64  `json:"hostPort"`
+	HostPortType      string `json:"hostPortType,omitempty"` //Allowable values: LITERAL, FROM_OFFER
+	Protocol          string `json:"protocol,omitempty"`     //Default is tcp
 }
 
 // https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerParameter

@@ -59,13 +59,45 @@ func validateDockerNetwork(v interface{}, k string) (ws []string, errors []error
 		// Since Singularity expects uppercase of these values and to make this resource
 		// simpler, therefore just use upppercase.
 		"BRIDGE": {},
+		"NONE":   {},
+		"HOST":   {},
 	}
 
 	value := v.(string)
 
 	if _, ok := validTypes[value]; !ok {
 		errors = append(errors, fmt.Errorf(
-			"%q must be one of ['BRIDGE']", k))
+			"%q must be one of ['BRIDGE', 'NONE', 'HOST']", k))
+	}
+	return
+}
+
+func validateSingularityPortMappingType(v interface{}, k string) (ws []string, errors []error) {
+	validTypes := map[string]struct{}{
+		"LITERAL":    {},
+		"FROM_OFFER": {},
+	}
+
+	value := v.(string)
+
+	if _, ok := validTypes[value]; !ok {
+		errors = append(errors, fmt.Errorf(
+			"%q must be one of ['LITERAL', 'FROM_OFFER']", k))
+	}
+	return
+}
+
+func validateSingularityPortProtocol(v interface{}, k string) (ws []string, errors []error) {
+	validTypes := map[string]struct{}{
+		"tcp": {},
+		"udp": {},
+	}
+
+	value := v.(string)
+
+	if _, ok := validTypes[value]; !ok {
+		errors = append(errors, fmt.Errorf(
+			"%q must be one of ['udp', 'tcp']", k))
 	}
 	return
 }
