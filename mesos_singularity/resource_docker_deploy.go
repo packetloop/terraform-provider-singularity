@@ -99,6 +99,27 @@ func resourceDockerDeploy() *schema.Resource {
 					},
 				},
 			},
+			"volumes": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"container_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"mode": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validateSingularityDockerVolumeMode,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -136,6 +157,7 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	return true, nil
 
 }
+
 func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
 	var portMappings []singularity.DockerPortMapping
 	for _, lRaw := range configured {
@@ -153,6 +175,23 @@ func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMappi
 	}
 	return portMappings, nil
 }
+
+func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVolume, error) {
+	var dockerVolumes []singularity.SingularityVolume
+	for _, lRaw := range configured {
+		data := lRaw.(map[string]interface{})
+
+		l := singularity.SingularityVolume{
+			HostPath:          data["host_path"].(string),
+			ContainerPath:     data["container_path"].(string),
+			Mode:              data["mode"].(string),
+		}
+
+		dockerVolumes = append(dockerVolumes, l)
+	}
+	return dockerVolumes, nil
+}
+
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("deploy_id").(string))
@@ -178,6 +217,8 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	}
 	d.SetId(id)
 
+	dockerVolumes, err := expandDockerVolumes(d.Get("volumes").(*schema.Set).List())
+
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
@@ -189,6 +230,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 			Image:          image,
 			PortMappings:   portMappings,
 		},
+		Volumes:  dockerVolumes,
 	}
 	resource := singularity.SingularityDeployResources{
 		Cpus:     cpu,
