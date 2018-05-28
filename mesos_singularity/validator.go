@@ -101,3 +101,18 @@ func validateSingularityPortProtocol(v interface{}, k string) (ws []string, erro
 	}
 	return
 }
+
+func validateSingularityDockerVolumeMode(v interface{}, k string) (ws []string, errors []error) {
+	validTypes := map[string]struct{}{
+		"RO": {},
+		"RW": {},
+	}
+
+	value := v.(string)
+
+	if _, ok := validTypes[value]; !ok {
+		errors = append(errors, fmt.Errorf(
+			"%q must be one of ['RO', 'RW']", k))
+	}
+	return
+}

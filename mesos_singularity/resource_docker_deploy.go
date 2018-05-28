@@ -99,6 +99,52 @@ func resourceDockerDeploy() *schema.Resource {
 					},
 				},
 			},
+			"volume": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"container_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"mode": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validateSingularityDockerVolumeMode,
+						},
+					},
+				},
+			},
+			"uri": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"cache": &schema.Schema{
+							Type:     schema.TypeBool,
+							Default:  false,
+							Optional: true,
+						},
+						"executable": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"extract": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -136,6 +182,7 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	return true, nil
 
 }
+
 func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
 	var portMappings []singularity.DockerPortMapping
 	for _, lRaw := range configured {
@@ -152,6 +199,39 @@ func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMappi
 		portMappings = append(portMappings, l)
 	}
 	return portMappings, nil
+}
+
+func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVolume, error) {
+	var dockerVolumes []singularity.SingularityVolume
+	for _, lRaw := range configured {
+		data := lRaw.(map[string]interface{})
+
+		l := singularity.SingularityVolume{
+			HostPath:          data["host_path"].(string),
+			ContainerPath:     data["container_path"].(string),
+			Mode:              data["mode"].(string),
+		}
+
+		dockerVolumes = append(dockerVolumes, l)
+	}
+	return dockerVolumes, nil
+}
+
+func expandUris(configured []interface{}) ([]singularity.SingularityMesosArtifact, error) {
+	var uris []singularity.SingularityMesosArtifact
+	for _, lRaw := range configured {
+		data := lRaw.(map[string]interface{})
+
+		l := singularity.SingularityMesosArtifact{
+			URI:               data["path"].(string),
+			Cache:             data["cache"].(bool),
+			Extract:           data["extract"].(bool),
+			Executable:        data["executable"].(bool),
+		}
+
+		uris = append(uris, l)
+	}
+	return uris, nil
 }
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
@@ -178,6 +258,9 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	}
 	d.SetId(id)
 
+	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
+	uris, err := expandUris(d.Get("uri").(*schema.Set).List())
+
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
@@ -189,6 +272,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 			Image:          image,
 			PortMappings:   portMappings,
 		},
+		Volumes:  dockerVolumes,
 	}
 	resource := singularity.SingularityDeployResources{
 		Cpus:     cpu,
@@ -197,6 +281,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	}
 
 	dep := singularity.NewDeploy(id)
+	dep.SetURIs(uris)
 
 	// Move this to a map function.
 	if len(arguments) > 0 {
@@ -279,6 +364,9 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("args") ||
 		d.HasChange("command") ||
 		d.HasChange("env") ||
+		d.HasChange("port_mapping") ||
+		d.HasChange("volume") ||
+		d.HasChange("uri") ||
 		d.HasChange("network") {
 		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
 		d.Partial(false)

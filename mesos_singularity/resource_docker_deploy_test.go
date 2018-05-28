@@ -109,6 +109,45 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 	})
 }
 
+func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckSingularityRequestDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckSingularityDeployDockerConfigVolumes,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSingularityRequestExists("singularity_deploy.foobaz"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobaz"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "force_pull_image", "false"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "network", "bridge"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "image", "golang:latest"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "cpu", "2"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "memory", "128"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "num_ports", "1"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "command", "bash"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "request_id", "myrequestfoobaz"),
+					// FIXME
+					// resource.TestCheckResourceAttr(
+					// 	"singularity_docker_deploy.foobaz", "volume.%", "1"),
+					// resource.TestCheckResourceAttr(
+					// 	"singularity_docker_deploy.foobaz", "envs.NAME", "lenfree"),
+				),
+			},
+		},
+	})
+}
+
+
 const testAccCheckSingularityDeployDockerConfigDefault = `
 resource "singularity_request" "foo" {
 	request_id             = "myrequest"
@@ -126,10 +165,6 @@ resource "singularity_docker_deploy" "foo" {
 			command          = "bash"
 			args             = ["-xc", "date"]
 			request_id       = "${singularity_request.foo.id}"
-			envs {
-				MYENV = "test"
-				NAME  = "lenfree"
-			}
 }
 `
 
@@ -176,16 +211,39 @@ resource "singularity_docker_deploy" "foobar" {
 	command          = "bash"
 	args             = ["-xc", "date"]
 	request_id       = "${singularity_request.foobar.id}"
-	envs {
-		"MYENV" = "test"
-		"NAME"  = "lenfree"
-	}
 	port_mapping {
 		host_port           = 0
 		container_port      = 10001
 		container_port_type = "LITERAL"
 		host_port_type      = "FROM_OFFER"
 		protocol            = "tcp"
+	}
+}
+`
+
+
+const testAccCheckSingularityDeployDockerConfigVolumes = `
+resource "singularity_request" "foobaz" {
+	request_id             = "myrequestfoobaz"
+	request_type           = "SERVICE"
+	instances              = 1
+	max_tasks_per_offer    = 2
+}
+resource "singularity_docker_deploy" "foobaz" {
+	deploy_id        = "mydeployfoobaz"
+	force_pull_image = false
+	network          = "bridge"
+	image            = "golang:latest"
+	cpu              = 2
+	memory           = 128
+	num_ports        = 1
+	command          = "bash"
+	args             = ["-xc", "date"]
+	request_id       = "${singularity_request.foobaz.id}"
+	volume {
+		mode           = "RO"
+		container_path = "/inside/path"
+		host_path      = "/outside/path"
 	}
 }
 `
