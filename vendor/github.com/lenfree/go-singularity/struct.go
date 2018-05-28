@@ -130,7 +130,7 @@ type SingularityDockerParameter struct {
 // SingularityVolume contains information about Docker volume. This is optional.
 // https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityVolume
 type SingularityVolume struct {
-	HostPath      string `json:"host_path"`
+	HostPath      string `json:"hostPath"`
 	ContainerPath string `json:"containerPath"`
 	Mode          string `json:"mode"`
 }
@@ -288,8 +288,8 @@ type ExecutorData struct {
 type SingularityMesosArtifact struct {
 	Cache      bool   `json:"cache,omitempty"`
 	URI        string `json:"uri,omitempty"`
-	Extract    bool   `json:"extact,omitempty"`
-	Executable bool   `json:"executabl,omitempty"`
+	Extract    bool   `json:"extract,omitempty"`
+	Executable bool   `json:"executable,omitempty"`
 }
 
 // SingularityDeploy contains requird and optional parameter to configure

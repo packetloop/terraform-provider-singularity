@@ -68,4 +68,17 @@ resource "singularity_docker_deploy" "test-deploy" {
     host_port_type      = "FROM_OFFER"
     protocol            = "tcp"
   }
+
+  volume {
+    host_path = "/outside/path"
+    container_path = "/inside/path"
+    mode = "RO"
+  }
+
+  uri {
+    uri = "file:///app/config.json"
+    cache = false
+    executable = false
+    extract = true
+  }
 }
