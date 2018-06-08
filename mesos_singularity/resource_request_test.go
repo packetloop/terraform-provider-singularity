@@ -56,7 +56,7 @@ func TestAccSingularityRequestRunOnceCreate(t *testing.T) {
 		},
 	})
 }
-func TestAccSingulariVtyRequestServiceCreate(t *testing.T) {
+func TestAccSingularityRequestServiceCreate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckSingularityRequestDestroy,

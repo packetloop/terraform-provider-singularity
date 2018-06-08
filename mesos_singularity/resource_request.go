@@ -17,6 +17,9 @@ func resourceRequest() *schema.Resource {
 		Exists: resourceRequestExists,
 		Update: resourceRequestUpdate,
 		Delete: resourceRequestDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceResourceRequestImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"request_id": &schema.Schema{
@@ -56,6 +59,7 @@ func resourceRequest() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				ForceNew: true,
+				Default:  2,
 			},
 			"state": &schema.Schema{
 				Type:         schema.TypeString,
@@ -106,6 +110,8 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	if requestType == "run_once" {
 		resp, err := singularity.NewRequest(singularity.RUN_ONCE, id).
 			SetInstances(instances).
+			SetMaxTasksPerOffer(maxTasksPerOffer).
+			SetNumRetriesOnFailures(numRetriesOnFailure).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -127,6 +133,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 			SetID(id).
 			SetInstances(instances).
 			SetMaxTasksPerOffer(maxTasksPerOffer).
+			SetNumRetriesOnFailures(numRetriesOnFailure).
 			Create(clientConn(m))
 
 		if err != nil {
@@ -145,6 +152,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 		resp, err := singularity.NewRequest(singularity.ON_DEMAND, id).
 			SetInstances(instances).
 			SetMaxTasksPerOffer(maxTasksPerOffer).
+			SetNumRetriesOnFailures(numRetriesOnFailure).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -184,6 +192,12 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	if r.RestyResponse.StatusCode() == 404 {
 		return fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
+	d.Set("request_id", r.Body.SingularityRequest.ID)
+	d.Set("request_type", r.Body.SingularityRequest.RequestType)
+	d.Set("schedule", r.Body.SingularityRequest.Schedule)
+	d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
+	d.Set("instances", r.Body.SingularityRequest.Instances)
+	d.Set("max_tasks_per_offer", r.Body.SingularityRequest.MaxTasksPerOffer)
 	return nil
 }
 
@@ -194,10 +208,9 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("schedule") ||
 		d.HasChange("request_type") ||
 		d.HasChange("num_retries_on_failure") ||
-		d.HasChange("schedule") ||
 		d.HasChange("instances") ||
 		d.HasChange("schedule_type") ||
-		d.HasChange("max_tasks_pe_offer") {
+		d.HasChange("max_tasks_per_offer") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather
 		// than delete and add.
@@ -237,4 +250,11 @@ func deleteRequest(id string) (f func(d *schema.ResourceData, m interface{}) err
 		d.SetId("")
 		return nil
 	}
+}
+
+func resourceResourceRequestImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	if err := resourceRequestRead(d, meta); err != nil {
+		return nil, err
+	}
+	return []*schema.ResourceData{d}, nil
 }
