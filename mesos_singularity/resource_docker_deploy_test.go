@@ -2,6 +2,7 @@ package mesos_singularity
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -98,11 +99,17 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "memory", "128"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "num_ports", "1"),
+						"singularity_docker_deploy.foobar", "num_ports", "2"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "command", "bash"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "request_id", "myrequestfoobar"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobar", "port_mapping.#", "2"),
+					// Skip attribute test for port_mapping because schema.typeSet items are
+					// are stored in state with an index value calculated by the hash of the
+					// attributes of the set according to
+					// https://www.terraform.io/docs/extend/schemas/schema-types.html
 				),
 			},
 		},
@@ -136,17 +143,17 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 						"singularity_docker_deploy.foobaz", "command", "bash"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "request_id", "myrequestfoobaz"),
-					// FIXME
-					// resource.TestCheckResourceAttr(
-					// 	"singularity_docker_deploy.foobaz", "volume.%", "1"),
-					// resource.TestCheckResourceAttr(
-					// 	"singularity_docker_deploy.foobaz", "envs.NAME", "lenfree"),
+					resource.TestCheckResourceAttr(
+						"singularity_docker_deploy.foobaz", "volume.#", "1"),
+					// Skip attribute test for volume because schema.typeSet items are
+					// are stored in state with an index value calculated by the hash of the
+					// attributes of the set according to
+					// https://www.terraform.io/docs/extend/schemas/schema-types.html
 				),
 			},
 		},
 	})
 }
-
 
 const testAccCheckSingularityDeployDockerConfigDefault = `
 resource "singularity_request" "foo" {
@@ -207,7 +214,7 @@ resource "singularity_docker_deploy" "foobar" {
 	image            = "golang:latest"
 	cpu              = 2
 	memory           = 128
-	num_ports        = 1
+	num_ports        = 2
 	command          = "bash"
 	args             = ["-xc", "date"]
 	request_id       = "${singularity_request.foobar.id}"
@@ -218,9 +225,15 @@ resource "singularity_docker_deploy" "foobar" {
 		host_port_type      = "FROM_OFFER"
 		protocol            = "tcp"
 	}
+	port_mapping {
+		host_port           = 1
+		container_port      = 8080
+		container_port_type = "LITERAL"
+		host_port_type      = "FROM_OFFER"
+		protocol            = "tcp"
+	}
 }
 `
-
 
 const testAccCheckSingularityDeployDockerConfigVolumes = `
 resource "singularity_request" "foobaz" {
@@ -289,4 +302,109 @@ func SingularityDockerDeployExistsHelper(s *terraform.State, client *singularity
 		}
 	}
 	return nil
+}
+
+func TestExpandPortMappings(t *testing.T) {
+	portMappings := []struct {
+		val    []interface{}
+		expect []singularity.DockerPortMapping
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"host_port":           0,
+					"container_port":      10001,
+					"container_port_type": "LITERAL",
+					"host_port_type":      "FROM_OFFER",
+					"protocol":            "tcp",
+				},
+			},
+			[]singularity.DockerPortMapping{
+				singularity.DockerPortMapping{
+					HostPort:          0,
+					ContainerPort:     10001,
+					ContainerPortType: "LITERAL",
+					HostPortType:      "FROM_OFFER",
+					Protocol:          "tcp",
+				},
+			},
+		},
+	}
+	for _, data := range portMappings {
+		actual, err := expandPortMappings(data.val)
+		if err != nil {
+			t.Errorf("Error %v\n", err)
+		}
+		if diff := reflect.DeepEqual(data.expect, actual); !diff {
+			t.Errorf("Got %+v\n, wants %#+v\n, actual %#+v\n, passed %v\n", diff, data.expect, actual, data.val)
+		}
+	}
+}
+
+func TestExpandDockerVolumes(t *testing.T) {
+	portMappings := []struct {
+		val    []interface{}
+		expect []singularity.SingularityVolume
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"mode":           "RW",
+					"container_path": "/inside/path",
+					"host_path":      "/outside/path",
+				},
+			},
+			[]singularity.SingularityVolume{
+				singularity.SingularityVolume{
+					Mode:          "RW",
+					ContainerPath: "/inside/path",
+					HostPath:      "/outside/path",
+				},
+			},
+		},
+	}
+	for _, data := range portMappings {
+		actual, err := expandDockerVolumes(data.val)
+		if err != nil {
+			t.Errorf("Error %v\n", err)
+		}
+		if diff := reflect.DeepEqual(data.expect, actual); !diff {
+			t.Errorf("Got %+v\n, wants %#+v\n, actual %#+v\n, passed %v\n", diff, data.expect, actual, data.val)
+		}
+	}
+}
+
+func TestExpandUris(t *testing.T) {
+	portMappings := []struct {
+		val    []interface{}
+		expect []singularity.SingularityMesosArtifact
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"path":       "file:///etc/docker.tar.gz",
+					"cache":      false,
+					"executable": false,
+					"extract":    true,
+				},
+			},
+			[]singularity.SingularityMesosArtifact{
+				singularity.SingularityMesosArtifact{
+					URI:        "file:///etc/docker.tar.gz",
+					Cache:      false,
+					Executable: false,
+					Extract:    true,
+				},
+			},
+		},
+	}
+	for _, data := range portMappings {
+		actual, err := expandUris(data.val)
+		if err != nil {
+			t.Errorf("Error %v\n", err)
+		}
+		if diff := reflect.DeepEqual(data.expect, actual); !diff {
+			t.Errorf("Got %+v\n, wants %#+v\n, actual %#+v\n, passed %v\n", diff, data.expect, actual, data.val)
+		}
+	}
 }
