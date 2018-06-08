@@ -67,6 +67,7 @@ func resourceDockerDeploy() *schema.Resource {
 				Default:  true,
 			},
 			"envs": envSchema(),
+			// We use typeSet because this parameter can be unordered list and must be unique.
 			"port_mapping": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -207,9 +208,9 @@ func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVol
 		data := lRaw.(map[string]interface{})
 
 		l := singularity.SingularityVolume{
-			HostPath:          data["host_path"].(string),
-			ContainerPath:     data["container_path"].(string),
-			Mode:              data["mode"].(string),
+			HostPath:      data["host_path"].(string),
+			ContainerPath: data["container_path"].(string),
+			Mode:          data["mode"].(string),
 		}
 
 		dockerVolumes = append(dockerVolumes, l)
@@ -223,10 +224,10 @@ func expandUris(configured []interface{}) ([]singularity.SingularityMesosArtifac
 		data := lRaw.(map[string]interface{})
 
 		l := singularity.SingularityMesosArtifact{
-			URI:               data["path"].(string),
-			Cache:             data["cache"].(bool),
-			Extract:           data["extract"].(bool),
-			Executable:        data["executable"].(bool),
+			URI:        data["path"].(string),
+			Cache:      data["cache"].(bool),
+			Extract:    data["extract"].(bool),
+			Executable: data["executable"].(bool),
 		}
 
 		uris = append(uris, l)
@@ -272,7 +273,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 			Image:          image,
 			PortMappings:   portMappings,
 		},
-		Volumes:  dockerVolumes,
+		Volumes: dockerVolumes,
 	}
 	resource := singularity.SingularityDeployResources{
 		Cpus:     cpu,
