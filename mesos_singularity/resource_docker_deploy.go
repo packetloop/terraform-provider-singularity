@@ -43,9 +43,10 @@ func resourceDockerDeploy() *schema.Resource {
 				Optional: true,
 			},
 			"network": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "BRIDGE",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "BRIDGE",
+				ValidateFunc: validateDockerNetwork,
 			},
 			"image": &schema.Schema{
 				Type:     schema.TypeString,
@@ -239,9 +240,9 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("deploy_id").(string))
 	requestID := strings.ToLower(d.Get("request_id").(string))
 	image := d.Get("image").(string)
-	network := strings.ToUpper(d.Get("network").(string))
+	network := d.Get("network").(string)
 	cpu := d.Get("cpu").(float64)
-	memory := d.Get("cpu").(float64)
+	memory := d.Get("memory").(float64)
 	numPorts := int64(d.Get("num_ports").(int))
 	forcePullImage := d.Get("force_pull_image").(bool)
 	command := d.Get("command").(string)
@@ -269,7 +270,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		Type: "DOCKER",
 		DockerInfo: singularity.DockerInfo{
 			ForcePullImage: forcePullImage,
-			Network:        network,
+			Network:        strings.ToUpper(network),
 			Image:          image,
 			PortMappings:   portMappings,
 		},
@@ -350,6 +351,23 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return fmt.Errorf("activedeploy empty %v", string(r.RestyResponse.Body()))
 	}
+	// TODO: Investigate how to deal with Can not deploy a deploy that has already been
+	// deployed deploy/task.
+	if r.RestyResponse.StatusCode() != 400 && r.Body.RequestType != "SERVICE" {
+		d.Set("request_id", r.Body.ActiveDeploy.RequestID)
+		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
+		d.Set("image", r.Body.ActiveDeploy.Image)
+		d.Set("force_pull_image", r.Body.ActiveDeploy.ForcePullImage)
+		d.Set("cpu", r.Body.ActiveDeploy.Cpus)
+		d.Set("memory", "128")
+		d.Set("command", r.Body.ActiveDeploy.Command)
+		d.Set("args", r.Body.ActiveDeploy.Arguments)
+		d.Set("env", r.Body.ActiveDeploy.Env)
+		d.Set("port_mapping", r.Body.ActiveDeploy.PortMappings)
+		d.Set("volume", r.Body.ActiveDeploy.Volumes)
+		d.Set("uri", r.Body.ActiveDeploy.Uris)
+		d.Set("network", strings.ToUpper(r.Body.ActiveDeploy.Network))
+	}
 	return nil
 }
 
@@ -381,4 +399,11 @@ func resourceDockerDeployDelete(d *schema.ResourceData, m interface{}) error {
 	a := deleteRequest(d.Get("request_id").(string))
 	d.SetId("")
 	return a(d, m)
+}
+
+func resourceResourceDockerDeployImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	if err := resourceDockerDeployRead(d, meta); err != nil {
+		return nil, err
+	}
+	return []*schema.ResourceData{d}, nil
 }
