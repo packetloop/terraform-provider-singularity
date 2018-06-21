@@ -359,7 +359,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("image", r.Body.ActiveDeploy.Image)
 		d.Set("force_pull_image", r.Body.ActiveDeploy.ForcePullImage)
 		d.Set("cpu", r.Body.ActiveDeploy.Cpus)
-		d.Set("memory", "128")
+		d.Set("memory", r.Body.ActiveDeploy.MemoryMb)
 		d.Set("command", r.Body.ActiveDeploy.Command)
 		d.Set("args", r.Body.ActiveDeploy.Arguments)
 		d.Set("env", r.Body.ActiveDeploy.Env)

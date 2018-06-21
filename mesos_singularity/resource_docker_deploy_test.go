@@ -216,7 +216,7 @@ resource "singularity_docker_deploy" "foobar" {
 	memory           = 128
 	num_ports        = 2
 	command          = "bash"
-	args             = ["-xc", "sleep 3"]
+	args             = ["-xc", "sleep 100"]
 	request_id       = "${singularity_request.foobar.id}"
 	port_mapping {
 		host_port           = 0
@@ -251,7 +251,7 @@ resource "singularity_docker_deploy" "foobaz" {
 	memory           = 128
 	num_ports        = 1
 	command          = "bash"
-	args             = ["-xc", "sleep 3"]
+	args             = ["-xc", "sleep 100"]
 	request_id       = "${singularity_request.foobaz.id}"
 	volume {
 		mode           = "RO"

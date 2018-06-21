@@ -194,10 +194,14 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	d.Set("request_type", r.Body.SingularityRequest.RequestType)
-	d.Set("schedule", r.Body.SingularityRequest.Schedule)
-	d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
 	d.Set("instances", r.Body.SingularityRequest.Instances)
 	d.Set("max_tasks_per_offer", r.Body.SingularityRequest.MaxTasksPerOffer)
+
+	// Only a scheuled type service expect below parameters.
+	if strings.ToUpper(r.Body.SingularityRequest.RequestType) == "SCHEDULED" {
+		d.Set("schedule", r.Body.SingularityRequest.Schedule)
+		d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
+	}
 	return nil
 }
 
