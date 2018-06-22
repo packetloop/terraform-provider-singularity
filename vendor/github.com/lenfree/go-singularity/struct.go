@@ -72,8 +72,21 @@ type Request struct {
 		ID                         string            `json:"id"`
 		RequestID                  string            `json:"requestId"`
 		SingularityDeployResources `json:"resources"`
-		Uris                       []string `json:"uris"`
+		Uris                       []SingularityMesosArtifact `json:"uris"`
+		Volumes                    []SingularityVolume        `json:"volumes"`
 	} `json:"activeDeploy"`
+	PendingDeploy struct {
+		CustomExecutorID           string              `json:"customExecutorId"`
+		Volumes                    []SingularityVolume `json:"volumes"`
+		SingularityDeployResources `json:"resources"`
+		Uris                       []SingularityMesosArtifact `json:"uris"`
+		ContainerInfo              `json:"containerInfo"`
+		Arguments                  []string    `json:"arguments"`
+		TaskEnv                    interface{} `json:"taskEnv"` //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
+		AutoAdvanceDeploySteps     bool        `json:"autoAdvanceDeploySteps"`
+		ID                         string      `json:"id"`
+		Command                    string      `json:"command"`
+	} `json:"pendingDeploy"`
 	RunImmediately struct {
 		Resources struct {
 			Cpus     int64 `json:"cpus"`
@@ -84,16 +97,6 @@ type Request struct {
 		RunAt int64  `json:"runAt"`
 		RunID string `json:"runId"`
 	} `json:"runImmediately"`
-	PendingDeploy struct {
-		Arguments                  []string `json:"arguments"`
-		Command                    string   `json:"command"`
-		ContainerInfo              `json:"containerInfo"`
-		Env                        map[string]string `json:"env"`
-		ID                         string            `json:"id"`
-		RequestID                  string            `json:"requestId"`
-		SingularityDeployResources `json:"resources"`
-		Uris                       []string `json:"uris"`
-	} `json:"pendingDeploy"`
 	SkipHealthchecksOnDeploy bool `json:"skipHealthchecksOnDeploy"`
 }
 
@@ -179,8 +182,8 @@ type Task struct {
 type SingularityDeployResources struct {
 	Cpus     float64 `json:"cpus,omitempty"`
 	MemoryMb float64 `json:"memoryMb,omitempty"`
-	NumPorts int64   `json:"numPorts,omitempty"`
 	DiskMb   float64 `json:"diskMb,omitempty"`
+	NumPorts int64   `json:"numPorts,omitempty"`
 }
 
 // SingularityScaleRequest contains parameters for making scaling a request. For more info, please see:

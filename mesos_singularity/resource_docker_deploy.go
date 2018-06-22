@@ -348,7 +348,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	// GetID(). Otherwise, use getrequestsbyid.
 	_, b, _ := client.GetRequests()
 	id := d.Id()
-	c := b.GetDeployID(id)
+	c := b.GetRequestID(id)
 	//	log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
 	//d.Set("deploy_id", r.Body.RequestDeployState.ActiveDeploy.DeployID)
 	r, err := client.GetRequestByID(c.SingularityRequest.ID)
