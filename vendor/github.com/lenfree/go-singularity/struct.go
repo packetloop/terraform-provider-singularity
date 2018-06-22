@@ -56,6 +56,11 @@ type Request struct {
 			RequestID string `json:"requestId"`
 			Timestamp int64  `json:"timestamp"`
 		} `json:"activeDeploy"`
+		PendingDeployState struct {
+			DeployID  string `json:"deployId"`
+			RequestID string `json:"requestId"`
+			Timestamp int64  `json:"timestamp"`
+		} `json:"pendingDeploy"`
 		RequestID string `json:"requestId"`
 	} `json:"requestDeployState"`
 	State        string `json:"state"`
@@ -79,6 +84,16 @@ type Request struct {
 		RunAt int64  `json:"runAt"`
 		RunID string `json:"runId"`
 	} `json:"runImmediately"`
+	PendingDeploy struct {
+		Arguments                  []string `json:"arguments"`
+		Command                    string   `json:"command"`
+		ContainerInfo              `json:"containerInfo"`
+		Env                        map[string]string `json:"env"`
+		ID                         string            `json:"id"`
+		RequestID                  string            `json:"requestId"`
+		SingularityDeployResources `json:"resources"`
+		Uris                       []string `json:"uris"`
+	} `json:"pendingDeploy"`
 	SkipHealthchecksOnDeploy bool `json:"skipHealthchecksOnDeploy"`
 }
 

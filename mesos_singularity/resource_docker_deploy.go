@@ -16,6 +16,9 @@ func resourceDockerDeploy() *schema.Resource {
 		Exists: resourceDockerDeployExists,
 		Update: resourceDockerDeployUpdate,
 		Delete: resourceDockerDeployDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceResourceDockerDeployImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"deploy_id": &schema.Schema{
@@ -176,7 +179,7 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 		return false, fmt.Errorf("%v", err)
 	}
 	if r.RestyResponse.StatusCode() == 404 {
-		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
+		return false, fmt.Errorf("exi %v", string(r.RestyResponse.Body()))
 	}
 	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
@@ -339,35 +342,58 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 // No changes to the remote resource are to be made.
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
-	r, err := client.GetRequestByID(d.Get("request_id").(string))
-	log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
+	//	r, err := client.GetRequestByID(d.Get("request_id").(string))
 
+	// Expensive loop. Only use this during import because we don't have access to other attributes than
+	// GetID(). Otherwise, use getrequestsbyid.
+	_, b, _ := client.GetRequests()
+	id := d.Id()
+	c := b.GetDeployID(id)
+	//	log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
+	//d.Set("deploy_id", r.Body.RequestDeployState.ActiveDeploy.DeployID)
+	r, err := client.GetRequestByID(c.SingularityRequest.ID)
 	if err != nil {
-		return err
+		d.SetId("")
+		return fmt.Errorf("err111: %+v = %v", r.Body.SingularityRequest, err)
 	}
-	if r.RestyResponse.StatusCode() == 404 {
-		return fmt.Errorf("status code error %v", string(r.RestyResponse.Body()))
-	}
-	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
-		return fmt.Errorf("activedeploy empty %v", string(r.RestyResponse.Body()))
-	}
-	// TODO: Investigate how to deal with Can not deploy a deploy that has already been
-	// deployed deploy/task.
-	if r.RestyResponse.StatusCode() != 400 && r.Body.RequestType != "SERVICE" {
-		d.Set("request_id", r.Body.ActiveDeploy.RequestID)
+	//	if r.RestyResponse.StatusCode() == 404 {
+	//		return fmt.Errorf("status code error %v", string(r.RestyResponse.Body()))
+	//	}
+	//	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
+	//		return fmt.Errorf("activedeploy empty %v", string(r.RestyResponse.Body()))
+	//	}
+	//	// TODO: Investigate how to deal with Can not deploy a deploy that has already been
+	//	// deployed deploy/task.
+	//	if r.RestyResponse.StatusCode() != 400 &&
+	if r.Body.SingularityRequest.RequestType == "SERVICE" {
+		//time.Sleep(360 * time.Second)
+		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
+		d.Set("network", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network)
+		d.Set("image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image)
+		d.Set("args", r.Body.PendingDeploy.Arguments)
+		d.Set("cpu", r.Body.PendingDeploy.Cpus)
+		d.Set("memory", r.Body.PendingDeploy.MemoryMb)
+		d.Set("num_ports", r.Body.PendingDeploy.NumPorts)
+		d.Set("command", r.Body.PendingDeploy.Command)
+		d.Set("envs", r.Body.PendingDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
+		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
+		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
+		d.Set("force_pull_image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage)
+	} else {
 		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
-		d.Set("image", r.Body.ActiveDeploy.Image)
-		d.Set("force_pull_image", r.Body.ActiveDeploy.ForcePullImage)
+		d.Set("network", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network)
+		d.Set("image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image)
+		d.Set("args", r.Body.ActiveDeploy.Arguments)
 		d.Set("cpu", r.Body.ActiveDeploy.Cpus)
 		d.Set("memory", r.Body.ActiveDeploy.MemoryMb)
+		d.Set("num_ports", r.Body.ActiveDeploy.NumPorts)
 		d.Set("command", r.Body.ActiveDeploy.Command)
-		d.Set("args", r.Body.ActiveDeploy.Arguments)
-		d.Set("env", r.Body.ActiveDeploy.Env)
-		d.Set("port_mapping", r.Body.ActiveDeploy.PortMappings)
-		d.Set("volume", r.Body.ActiveDeploy.Volumes)
-		d.Set("uri", r.Body.ActiveDeploy.Uris)
-		d.Set("network", strings.ToUpper(r.Body.ActiveDeploy.Network))
+		d.Set("envs", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
+		d.Set("port_mapping", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.PortMappings)
+		d.Set("volume", r.Body.ActiveDeploy.ContainerInfo.Volumes)
+		d.Set("force_pull_image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 	}
+	d.Set("request_id", r.Body.SingularityRequest.ID)
 	return nil
 }
 

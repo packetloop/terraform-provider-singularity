@@ -61,7 +61,7 @@ func (c *Client) GetRequests() (*resty.Response, Requests, error) {
 		R().
 		Get(c.Endpoint + "/api/requests")
 
-	err = c.Rest.JSONUnmarshal(res.Body(), body)
+	err = c.Rest.JSONUnmarshal(res.Body(), &body)
 	if err != nil {
 		return &resty.Response{}, nil, fmt.Errorf("Get Singularity requests not found: %v", err)
 	}
@@ -660,4 +660,13 @@ func (d *SingularityDeploy) SetDeployHealthTimeoutSeconds(t int64) Deploy {
 // Build builds a SingularityDeploy object.
 func (d *SingularityDeploy) Build() *SingularityDeploy {
 	return d
+}
+
+func (s Requests) GetDeployID(n string) Request {
+	for _, i := range s {
+		if i.RequestDeployState.ActiveDeploy.DeployID == n || i.RequestDeployState.PendingDeployState.DeployID == n {
+			return i
+		}
+	}
+	return Request{}
 }
