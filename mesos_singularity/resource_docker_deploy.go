@@ -179,8 +179,9 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 		return false, fmt.Errorf("%v", err)
 	}
 	if r.RestyResponse.StatusCode() == 404 {
-		return false, fmt.Errorf("exi %v", string(r.RestyResponse.Body()))
+		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
+	// A request exists does not mean a deploy exist. Hence, we do a check.
 	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
@@ -342,29 +343,24 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 // No changes to the remote resource are to be made.
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
-	//	r, err := client.GetRequestByID(d.Get("request_id").(string))
 
 	// Expensive loop. Only use this during import because we don't have access to other attributes than
 	// GetID(). Otherwise, use getrequestsbyid.
-	_, b, _ := client.GetRequests()
+	res, b, err := client.GetRequests()
+	if err != nil {
+		d.SetId("")
+		return err
+	}
+	log.Printf("[TRACE] Deploy Read HTTP Response %v", string(res.Body()))
 	id := d.Id()
 	c := b.GetRequestID(id)
-	//	log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
-	//d.Set("deploy_id", r.Body.RequestDeployState.ActiveDeploy.DeployID)
 	r, err := client.GetRequestByID(c.SingularityRequest.ID)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("err111: %+v = %v", r.Body.SingularityRequest, err)
+		return err
 	}
-	//	if r.RestyResponse.StatusCode() == 404 {
-	//		return fmt.Errorf("status code error %v", string(r.RestyResponse.Body()))
-	//	}
-	//	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
-	//		return fmt.Errorf("activedeploy empty %v", string(r.RestyResponse.Body()))
-	//	}
-	//	// TODO: Investigate how to deal with Can not deploy a deploy that has already been
-	//	// deployed deploy/task.
-	//	if r.RestyResponse.StatusCode() != 400 &&
+	// When we create a service request, a deploy does not run immediately by default
+	// and deploy would be in pending state.
 	if r.Body.SingularityRequest.RequestType == "SERVICE" {
 		//time.Sleep(360 * time.Second)
 		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
