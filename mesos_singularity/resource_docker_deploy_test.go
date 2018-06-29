@@ -87,7 +87,7 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar"),
+						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar2"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
@@ -126,7 +126,7 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobaz"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobaz"),
+						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobaz2"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
@@ -204,11 +204,10 @@ const testAccCheckSingularityDeployDockerConfigPortMapping = `
 resource "singularity_request" "foobar" {
 	request_id             = "myrequestfoobar"
 	request_type           = "SERVICE"
-	instances              = 1
-	max_tasks_per_offer    = 2
+	instances              = 2
 }
 resource "singularity_docker_deploy" "foobar" {
-	deploy_id        = "mydeployfoobar"
+	deploy_id        = "mydeployfoobar2"
 	force_pull_image = false
 	network          = "BRIDGE"
 	image            = "golang:latest"
@@ -216,7 +215,7 @@ resource "singularity_docker_deploy" "foobar" {
 	memory           = 128
 	num_ports        = 2
 	command          = "bash"
-	args             = ["-xc", "sleep 100"]
+	args             = ["-xc", "while true; do echo up; done"]
 	request_id       = "${singularity_request.foobar.id}"
 	port_mapping {
 		host_port           = 0
@@ -240,10 +239,9 @@ resource "singularity_request" "foobaz" {
 	request_id             = "myrequestfoobaz"
 	request_type           = "SERVICE"
 	instances              = 1
-	max_tasks_per_offer    = 2
 }
 resource "singularity_docker_deploy" "foobaz" {
-	deploy_id        = "mydeployfoobaz"
+	deploy_id        = "mydeployfoobaz2"
 	force_pull_image = false
 	network          = "BRIDGE"
 	image            = "golang:latest"
@@ -251,7 +249,7 @@ resource "singularity_docker_deploy" "foobaz" {
 	memory           = 128
 	num_ports        = 1
 	command          = "bash"
-	args             = ["-xc", "sleep 100"]
+	args             = ["-xc", "while true; do echo up; done"]
 	request_id       = "${singularity_request.foobaz.id}"
 	volume {
 		mode           = "RO"

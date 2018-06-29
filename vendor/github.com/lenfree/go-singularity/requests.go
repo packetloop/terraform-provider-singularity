@@ -61,11 +61,21 @@ func (c *Client) GetRequests() (*resty.Response, Requests, error) {
 		R().
 		Get(c.Endpoint + "/api/requests")
 
-	err = c.Rest.JSONUnmarshal(res.Body(), body)
+	err = c.Rest.JSONUnmarshal(res.Body(), &body)
 	if err != nil {
-		return &resty.Response{}, nil, fmt.Errorf("Get Singularity requests not found: %v", err)
+		return &resty.Response{}, Requests{}, fmt.Errorf("Get Singularity requests not found: %v", err)
 	}
 	return res, body, nil
+}
+
+// GetRequestID accepts a deploy id string and return a request for matching deploy id.
+func (s Requests) GetRequestID(n string) Request {
+	for _, i := range s {
+		if i.RequestDeployState.ActiveDeploy.DeployID == n || i.RequestDeployState.PendingDeployState.DeployID == n {
+			return i
+		}
+	}
+	return Request{}
 }
 
 // GetRequestByID accpets string id and retrieve a specific Singularity Request by ID
