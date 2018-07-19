@@ -11,6 +11,7 @@ import (
 
 func TestAccSingularityRequestScheduledCreate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckSingularityRequestDestroy,
 		Steps: []resource.TestStep{

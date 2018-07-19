@@ -181,7 +181,9 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	if r.RestyResponse.StatusCode() == 404 {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
-	// A request exists does not mean a deploy exist. Hence, we do a check.
+	if r.RestyResponse.StatusCode() == 400 {
+		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
+	}
 	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
@@ -343,6 +345,9 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 // No changes to the remote resource are to be made.
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
+	//deploy_id := d.Get("deploy_id").(string)
+	//r, err := client.GetRequestByID(d.Get("request_id").(string))
+	//log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
 
 	// Expensive loop. Only use this during import because we don't have access to other attributes than
 	// GetID(). Otherwise, use getrequestsbyid.
@@ -426,6 +431,10 @@ func resourceDockerDeployDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceResourceDockerDeployImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	//	myval, ok := d.GetOk("request_id")
+	//	if !ok {
+	//		return nil, fmt.Errorf("err: %+v, %+v", myval, ok)
+	//	}
 	if err := resourceDockerDeployRead(d, meta); err != nil {
 		return nil, err
 	}
