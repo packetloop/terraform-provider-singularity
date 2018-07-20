@@ -116,3 +116,19 @@ func validateSingularityDockerVolumeMode(v interface{}, k string) (ws []string, 
 	}
 	return
 }
+
+func validateRequestSlavePlacement(v interface{}, k string) (ws []string, errors []error) {
+	validTypes := map[string]struct{}{
+		"SEPARATE_BY_DEPLOY":  {},
+		"SEPARATE_BY_REQUEST": {},
+		"SEPARATE_ALL_SLAVES": {},
+	}
+
+	value := v.(string)
+
+	if _, ok := validTypes[value]; !ok {
+		errors = append(errors, fmt.Errorf(
+			"%q must be one of ['SEPARATE_BY_DEPLOY', 'SEPARATE_BY_REQUEST', 'SEPARATE_ALL_SLAVES']", k))
+	}
+	return
+}

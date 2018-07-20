@@ -82,3 +82,10 @@ resource "singularity_docker_deploy" "test-deploy" {
     extract = true
   }
 }
+
+resource "singularity_request" "lenfree-demand" {
+  request_id          = "lenfree-ondemand-2"
+  request_type        = "ON_DEMAND"
+  instances           = 2
+  slave_placement     = "SEPARATE_BY_DEPLOY"
+}

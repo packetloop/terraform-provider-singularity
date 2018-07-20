@@ -128,6 +128,7 @@ type ServiceRequest interface {
 	SetScheduleType(string) (ServiceRequest, error)
 	SetMaxTasksPerOffer(int) ServiceRequest
 	SetNumRetriesOnFailures(int64) ServiceRequest
+	SetSlavePlacement(string) ServiceRequest
 }
 
 // SetID accepts a string to assign a request ID.
@@ -333,6 +334,14 @@ func (r *ScaleHTTPRequest) scale(c *Client) (HTTPResponse, error) {
 		RequestParent: data,
 	}
 	return response, nil
+}
+
+// SetSlavePlacement accepts a string and return a ServiceRequest struct. This
+// is to set a strategy for determining where to place new tasks. Can be
+// SEPARATE, OPTIMISTIC, GREEDY, SEPARATE_BY_DEPLOY, or SEPARATE_BY_REQUEST.
+func (r *SingularityRequest) SetSlavePlacement(s string) ServiceRequest {
+	r.SlavePlacement = &s
+	return r
 }
 
 // DeployRequest is an interface to create a Singularity Deploy object.

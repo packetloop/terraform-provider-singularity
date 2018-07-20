@@ -124,6 +124,7 @@ func TestAccSingularityRequesOnDemandCreate(t *testing.T) {
 		},
 	})
 }
+
 func TestAccSingularityRequesOnDemandCreateDefault(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
@@ -237,4 +238,40 @@ func SingularityRequestExistsHelper(s *terraform.State, client *singularity.Clie
 		}
 	}
 	return nil
+}
+
+const testAccCheckSingularityRequestSlavePlacement = `
+resource "singularity_request" "fooslaveplacement" {
+			request_id             = "fooslaveplacement-test-id"
+			request_type           = "SCHEDULED"
+			schedule               = "0 7 * * *"
+			schedule_type          = "CRON"
+			slave_placement        = "SEPARATE_BY_DEPLOY"
+			num_retries_on_failure = 3
+}
+`
+
+func TestAccSingularityRequestSlavePlacement(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckSingularityRequestDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckSingularityRequestSlavePlacement,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSingularityRequestExists("singularity_request.fooslaveplacement"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "request_id", "fooslaveplacement-test-id"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "request_type", "SCHEDULED"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "schedule", "0 7 * * *"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "schedule_type", "CRON"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "slave_placement", "SEPARATE_BY_DEPLOY"),
+				),
+			},
+		},
+	})
 }
