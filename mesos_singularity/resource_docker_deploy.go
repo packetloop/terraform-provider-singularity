@@ -374,6 +374,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("envs", r.Body.PendingDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
 		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
+		d.Set("uri", r.Body.PendingDeploy.Uris)
 		d.Set("force_pull_image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 	} else {
 		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
@@ -387,6 +388,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("envs", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
 		d.Set("port_mapping", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.ActiveDeploy.ContainerInfo.Volumes)
+		d.Set("uri", r.Body.ActiveDeploy.Uris)
 		d.Set("force_pull_image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
