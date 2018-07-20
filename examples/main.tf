@@ -39,9 +39,9 @@ resource "singularity_request" "lenfree-worker" {
 }
 
 resource "singularity_request" "lenfree-demand" {
-  request_id          = "lenfree-ondemand-2"
-  request_type        = "ON_DEMAND"
-  instances           = 2
+  request_id   = "lenfree-ondemand-2"
+  request_type = "ON_DEMAND"
+  instances    = 2
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
@@ -69,22 +69,22 @@ resource "singularity_docker_deploy" "test-deploy" {
   }
 
   volume {
-    host_path = "/outside/path"
+    host_path      = "/outside/path"
     container_path = "/inside/path"
-    mode = "RO"
+    mode           = "RO"
   }
 
   uri {
-    path = "file:///app/config.json"
-    cache = false
+    path       = "file:///app/config.json"
+    cache      = false
     executable = false
-    extract = true
+    extract    = true
   }
 }
 
 resource "singularity_request" "imoussa-demand" {
-  request_id          = "imoussa-ondemand-2"
-  request_type        = "ON_DEMAND"
-  instances           = 2
-  slave_placement     = "SEPARATE_BY_DEPLOY"
+  request_id      = "imoussa-ondemand-2"
+  request_type    = "ON_DEMAND"
+  instances       = 2
+  slave_placement = "SEPARATE_BY_DEPLOY"
 }
