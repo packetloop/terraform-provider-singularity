@@ -27,3 +27,19 @@ resource "singularity_docker_deploy" "test-deploy" {
 }
 
 More examples can be found in examples/main.tf.
+
+# Import Resource 
+-----------------
+
+Syntax
+
+```
+ terraform import singularity_request.lenfree-run <resource ID>
+ 
+```
+
+For example:
+```
+ terraform import singularity_request.lenfree-run lenfree--atlas-feedback-s3--backup-artifacts                                                                                              
+```
+
