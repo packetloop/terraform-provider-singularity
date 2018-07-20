@@ -42,13 +42,12 @@ resource "singularity_request" "lenfree-demand" {
   request_id          = "lenfree-ondemand-2"
   request_type        = "ON_DEMAND"
   instances           = 2
-  max_tasks_per_offer = 2
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
   deploy_id        = "mydeploy4"
   force_pull_image = false
-  network          = "bridge"
+  network          = "BRIDGE"
   image            = "golang:latest"
   cpu              = 2
   memory           = 128
@@ -76,9 +75,16 @@ resource "singularity_docker_deploy" "test-deploy" {
   }
 
   uri {
-    uri = "file:///app/config.json"
+    path = "file:///app/config.json"
     cache = false
     executable = false
     extract = true
   }
+}
+
+resource "singularity_request" "imoussa-demand" {
+  request_id          = "imoussa-ondemand-2"
+  request_type        = "ON_DEMAND"
+  instances           = 2
+  slave_placement     = "SEPARATE_BY_DEPLOY"
 }

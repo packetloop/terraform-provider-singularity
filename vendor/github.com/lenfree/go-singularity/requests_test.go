@@ -330,6 +330,34 @@ func TestNewDeployRequest(t *testing.T) {
 	}
 }
 
+func TestRequestSlavePlacement(t *testing.T) {
+	var data = []struct {
+		actualID               string
+		actualSlavePlacement   string
+		expectedID             string
+		expectedType           string
+		expectedSlavePlacement string
+	}{
+		{"test-id", "SPREAD_ALL_SLAVES", "test-id", "WORKER", "SPREAD_ALL_SLAVES"},
+	}
+
+	for _, tt := range data {
+		req := NewRequest(WORKER, tt.actualID).SetSlavePlacement(tt.actualSlavePlacement).Get()
+		if req.ID != tt.expectedID {
+			t.Errorf("NewRequest(%s): expected %s, got %s",
+				tt.actualID,
+				tt.expectedID,
+				req.ID)
+		}
+		if *req.SlavePlacement != tt.expectedSlavePlacement {
+			t.Errorf("SetSlavePlacement(%s): expected %s, got %s",
+				tt.actualSlavePlacement,
+				tt.expectedSlavePlacement,
+				*req.SlavePlacement)
+		}
+	}
+}
+
 /*  Fix this http request test. Checkout gomega http client test
 https://onsi.github.io/gomega/#ghttp-testing-http-clients
 
@@ -393,7 +421,7 @@ func TestNewDeleteDeploy(t *testing.T) {
 		args args
 		want DeleteHTTPDeploy
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -26,5 +26,5 @@ build: dep
 	gox -output="./release/{{.Dir}}_{{.OS}}_{{.Arch}}" -os="linux windows darwin" -arch="amd64" .
 
 .PHONY: build-local
-build: dep
+build-local: dep
 	go build -o examples/terraform-provider-singularity

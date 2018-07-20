@@ -55,17 +55,18 @@ func resourceRequest() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"max_tasks_per_offer": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				Default:  2,
-			},
 			"state": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ValidateFunc: validateRequestState,
+			},
+			"slave_placement": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "SEPARATE_BY_DEPLOY",
+				ForceNew:     true,
+				ValidateFunc: validateRequestSlavePlacement,
 			},
 		},
 	}
@@ -101,7 +102,7 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	scheduleType := strings.ToUpper(d.Get("schedule_type").(string))
 	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
-	maxTasksPerOffer := d.Get("max_tasks_per_offer").(int)
+	slavePlacement := strings.ToUpper(d.Get("slave_placement").(string))
 
 	// Singularity expects uppercase of these values and in our validator,
 	// we expect only uppercase to make our resource simpler. Having said
@@ -110,8 +111,8 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	if requestType == "run_once" {
 		resp, err := singularity.NewRequest(singularity.RUN_ONCE, id).
 			SetInstances(instances).
-			SetMaxTasksPerOffer(maxTasksPerOffer).
 			SetNumRetriesOnFailures(numRetriesOnFailure).
+			SetSlavePlacement(slavePlacement).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -131,9 +132,8 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 		}
 		resp, err := req.SetNumRetriesOnFailures(numRetriesOnFailure).
 			SetID(id).
-			SetInstances(instances).
-			SetMaxTasksPerOffer(maxTasksPerOffer).
 			SetNumRetriesOnFailures(numRetriesOnFailure).
+			SetSlavePlacement(slavePlacement).
 			Create(clientConn(m))
 
 		if err != nil {
@@ -144,22 +144,22 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	if requestType == "service" {
 		resp, err := singularity.NewRequest(singularity.SERVICE, id).
 			SetInstances(instances).
-			SetMaxTasksPerOffer(maxTasksPerOffer).
+			SetSlavePlacement(slavePlacement).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "on_demand" {
 		resp, err := singularity.NewRequest(singularity.ON_DEMAND, id).
-			SetInstances(instances).
-			SetMaxTasksPerOffer(maxTasksPerOffer).
 			SetNumRetriesOnFailures(numRetriesOnFailure).
+			SetInstances(instances).
+			SetSlavePlacement(slavePlacement).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
 	if requestType == "worker" {
 		resp, err := singularity.NewRequest(singularity.WORKER, id).
 			SetInstances(instances).
-			SetMaxTasksPerOffer(maxTasksPerOffer).
+			SetSlavePlacement(slavePlacement).
 			Create(clientConn(m))
 		return checkResponse(d, m, resp, err)
 	}
@@ -195,12 +195,19 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	d.Set("request_type", r.Body.SingularityRequest.RequestType)
 	d.Set("instances", r.Body.SingularityRequest.Instances)
-	d.Set("max_tasks_per_offer", r.Body.SingularityRequest.MaxTasksPerOffer)
+	d.Set("slave_placement", r.Body.SingularityRequest.SlavePlacement)
 
 	// Only a scheuled type service expect below parameters.
 	if strings.ToUpper(r.Body.SingularityRequest.RequestType) == "SCHEDULED" {
 		d.Set("schedule", r.Body.SingularityRequest.Schedule)
 		d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
+	}
+
+	// Only a service or run_once or on_demand type expect below parameters.
+	if strings.ToUpper(r.Body.SingularityRequest.RequestType) == "SCHEDULED" ||
+		strings.ToUpper(r.Body.SingularityRequest.RequestType) == "RUN_ONCE" ||
+		strings.ToUpper(r.Body.SingularityRequest.RequestType) == "ON_DEMAND" {
+		d.Set("num_retries_on_failure", r.Body.SingularityRequest.NumRetriesOnFailure)
 	}
 	return nil
 }
@@ -214,7 +221,7 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("num_retries_on_failure") ||
 		d.HasChange("instances") ||
 		d.HasChange("schedule_type") ||
-		d.HasChange("max_tasks_per_offer") {
+		d.HasChange("slave_placement") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
 		// TODO: Investigate whether we can just update existing request, rather
 		// than delete and add.

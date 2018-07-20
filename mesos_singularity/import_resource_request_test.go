@@ -30,3 +30,23 @@ func TestAccSingularityRequest_importRequestType(t *testing.T) {
 		},
 	})
 }
+
+func TestAccSingularityRequest_importRequestWithSlavePlacement(t *testing.T) {
+	resourceName := "singularity_request.fooslaveplacement"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckSingularityRequestDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccCheckSingularityRequestSlavePlacement,
+			},
+			resource.TestStep{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}

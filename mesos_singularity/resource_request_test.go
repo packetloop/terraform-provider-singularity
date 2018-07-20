@@ -26,8 +26,6 @@ func TestAccSingularityRequestScheduledCreate(t *testing.T) {
 						"singularity_request.foo", "schedule", "0 7 * * *"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo", "schedule_type", "CRON"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo", "max_tasks_per_offer", "1"),
 				),
 			},
 		},
@@ -49,8 +47,6 @@ func TestAccSingularityRequestRunOnceCreate(t *testing.T) {
 						"singularity_request.foo-run", "request_type", "RUN_ONCE"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo-run", "instances", "5"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo-run", "max_tasks_per_offer", "2"),
 				),
 			},
 		},
@@ -71,8 +67,6 @@ func TestAccSingularityRequestServiceCreate(t *testing.T) {
 						"singularity_request.bar", "request_type", "SERVICE"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.bar", "instances", "3"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.bar", "max_tasks_per_offer", "3"),
 				),
 			},
 		},
@@ -94,8 +88,6 @@ func TestAccSingularityRequestWorkerCreate(t *testing.T) {
 						"singularity_request.foo-worker", "request_type", "WORKER"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo-worker", "instances", "2"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo-worker", "max_tasks_per_offer", "5"),
 				),
 			},
 		},
@@ -117,13 +109,12 @@ func TestAccSingularityRequesOnDemandCreate(t *testing.T) {
 						"singularity_request.foo-ondemand", "request_type", "ON_DEMAND"),
 					resource.TestCheckResourceAttr(
 						"singularity_request.foo-ondemand", "instances", "2"),
-					resource.TestCheckResourceAttr(
-						"singularity_request.foo-ondemand", "max_tasks_per_offer", "4"),
 				),
 			},
 		},
 	})
 }
+
 func TestAccSingularityRequesOnDemandCreateDefault(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
@@ -151,7 +142,6 @@ resource "singularity_request" "foo" {
 			request_type           = "SCHEDULED"
 			schedule               = "0 7 * * *"
 			schedule_type          = "CRON"
-			max_tasks_per_offer    = 1
 }
 `
 
@@ -160,7 +150,6 @@ resource "singularity_request" "foo-run" {
 			request_id             = "foo-run-id"
 			request_type           = "RUN_ONCE"
 			instances              = 5
-			max_tasks_per_offer    = 2
 }
 `
 
@@ -169,7 +158,6 @@ resource "singularity_request" "bar" {
 			request_id             = "foo-service-id"
 			request_type           = "SERVICE"
 			instances              = 3
-			max_tasks_per_offer    = 3
 }
 `
 
@@ -178,7 +166,6 @@ resource "singularity_request" "foo-worker" {
 			request_id             = "foo-worker-id"
 			request_type           = "WORKER"
 			instances              = 2
-			max_tasks_per_offer    = 5
 }
 `
 
@@ -187,7 +174,6 @@ resource "singularity_request" "foo-ondemand" {
 			request_id             = "foo-ondemand-id"
 			request_type           = "ON_DEMAND"
 			instances              = 2
-			max_tasks_per_offer    = 4
 }
 `
 
@@ -237,4 +223,40 @@ func SingularityRequestExistsHelper(s *terraform.State, client *singularity.Clie
 		}
 	}
 	return nil
+}
+
+const testAccCheckSingularityRequestSlavePlacement = `
+resource "singularity_request" "fooslaveplacement" {
+			request_id             = "fooslaveplacement-test-id"
+			request_type           = "SCHEDULED"
+			schedule               = "0 7 * * *"
+			schedule_type          = "CRON"
+			slave_placement        = "SEPARATE_BY_DEPLOY"
+			num_retries_on_failure = 3
+}
+`
+
+func TestAccSingularityRequestSlavePlacement(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckSingularityRequestDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckSingularityRequestSlavePlacement,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSingularityRequestExists("singularity_request.fooslaveplacement"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "request_id", "fooslaveplacement-test-id"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "request_type", "SCHEDULED"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "schedule", "0 7 * * *"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "schedule_type", "CRON"),
+					resource.TestCheckResourceAttr(
+						"singularity_request.fooslaveplacement", "slave_placement", "SEPARATE_BY_DEPLOY"),
+				),
+			},
+		},
+	})
 }
