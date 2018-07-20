@@ -42,7 +42,6 @@ resource "singularity_request" "lenfree-demand" {
   request_id          = "lenfree-ondemand-2"
   request_type        = "ON_DEMAND"
   instances           = 2
-  max_tasks_per_offer = 2
 }
 
 resource "singularity_docker_deploy" "test-deploy" {

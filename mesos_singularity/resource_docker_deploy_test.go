@@ -181,7 +181,6 @@ resource "singularity_request" "bar" {
 	request_type           = "SCHEDULED"
 	schedule               = "0 7 * * *"
 	schedule_type          = "CRON"
-	max_tasks_per_offer    = 2
 }
 resource "singularity_docker_deploy" "bar" {
 	deploy_id        = "mydeploybar"
