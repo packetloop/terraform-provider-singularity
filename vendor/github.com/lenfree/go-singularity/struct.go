@@ -66,8 +66,8 @@ type Request struct {
 	} `json:"requestDeployState"`
 	State        string `json:"state"`
 	ActiveDeploy struct {
-		Arguments                  []string `json:"arguments"`
-		Command                    string   `json:"command"`
+		Arguments                  []string `json:"arguments,omitempy"`
+		Command                    string   `json:"command,omitempty"`
 		ContainerInfo              `json:"containerInfo"`
 		Env                        map[string]string `json:"env"`
 		ID                         string            `json:"id"`
@@ -75,6 +75,7 @@ type Request struct {
 		SingularityDeployResources `json:"resources"`
 		Uris                       []SingularityMesosArtifact `json:"uris"`
 		Volumes                    []SingularityVolume        `json:"volumes"`
+		Metadata                   map[string]string          `json:"metadata"`
 	} `json:"activeDeploy"`
 	PendingDeploy struct {
 		CustomExecutorID           string              `json:"customExecutorId"`
@@ -82,11 +83,12 @@ type Request struct {
 		SingularityDeployResources `json:"resources"`
 		Uris                       []SingularityMesosArtifact `json:"uris"`
 		ContainerInfo              `json:"containerInfo"`
-		Arguments                  []string    `json:"arguments"`
-		TaskEnv                    interface{} `json:"taskEnv"` //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
-		AutoAdvanceDeploySteps     bool        `json:"autoAdvanceDeploySteps"`
-		ID                         string      `json:"id"`
-		Command                    string      `json:"command"`
+		Arguments                  []string          `json:"arguments"`
+		TaskEnv                    interface{}       `json:"taskEnv"` //Map[int,Map[string,string]]	Map of environment variable overrides for specific task instances.
+		AutoAdvanceDeploySteps     bool              `json:"autoAdvanceDeploySteps"`
+		ID                         string            `json:"id"`
+		Command                    string            `json:"command"`
+		Metadata                   map[string]string `json:"metadata"`
 	} `json:"pendingDeploy"`
 	RunImmediately struct {
 		Resources struct {

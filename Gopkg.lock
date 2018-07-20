@@ -77,6 +77,12 @@
   version = "v3.5.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/cydev/zero"
+  packages = ["."]
+  revision = "4a4535dd56e7bac061977376055c8cce1e4aecc7"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -249,7 +255,7 @@
   branch = "master"
   name = "github.com/lenfree/go-singularity"
   packages = ["."]
-  revision = "3fab44c3e40c512c0f4a064e94eeab53da9e4ec3"
+  revision = "cf7f9ca352e024319ef6804de6f6bbe4bde31bf5"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -460,6 +466,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd26588c71697db608dde6c571e7ba3785681afabd952404ed32c9de7d8096f8"
+  inputs-digest = "55d56453a8508fdef7c8dccb820fdabbbda5cc24fdbf8dd228e92561d60732a5"
   solver-name = "gps-cdcl"
   solver-version = 1

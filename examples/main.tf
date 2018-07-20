@@ -82,6 +82,44 @@ resource "singularity_docker_deploy" "test-deploy" {
   }
 }
 
+resource "singularity_docker_deploy" "test-deploy-2" {
+  deploy_id        = "mydeploy2"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  cpu              = 2
+  memory           = 128
+  command          = "bash"
+  args             = ["-xc", "env"]
+  request_id       = "${singularity_request.lenfree-demand.id}"
+
+  envs {
+    MYENV = "Test"
+    OWNER = "lenfree"
+  }
+
+  port_mapping {
+    host_port           = 0
+    container_port      = 10001
+    container_port_type = "LITERAL"
+    host_port_type      = "FROM_OFFER"
+    protocol            = "tcp"
+  }
+
+  volume {
+    host_path      = "/outside/path"
+    container_path = "/inside/path"
+    mode           = "RO"
+  }
+
+  uri {
+    path       = "file:///app/config.json"
+    cache      = false
+    executable = false
+    extract    = true
+  }
+}
+
 resource "singularity_request" "imoussa-demand" {
   request_id      = "imoussa-ondemand-2"
   request_type    = "ON_DEMAND"
