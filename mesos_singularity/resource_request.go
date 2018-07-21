@@ -198,15 +198,13 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("slave_placement", r.Body.SingularityRequest.SlavePlacement)
 
 	// Only a scheuled type service expect below parameters.
-	if strings.ToUpper(r.Body.SingularityRequest.RequestType) == "SCHEDULED" {
+	if checkRequestTypeMatch(r.Body, "SCHEDULED") {
 		d.Set("schedule", r.Body.SingularityRequest.Schedule)
 		d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
 	}
 
-	// Only a service or run_once or on_demand type expect below parameters.
-	if strings.ToUpper(r.Body.SingularityRequest.RequestType) == "SCHEDULED" ||
-		strings.ToUpper(r.Body.SingularityRequest.RequestType) == "RUN_ONCE" ||
-		strings.ToUpper(r.Body.SingularityRequest.RequestType) == "ON_DEMAND" {
+	// Only a service or run_once or on_demand type expect below parameters.i
+	if checkRequestTypeMatch(r.Body, "SCHEDULED", "RUN_ONCE", "ON_DEMAND") {
 		d.Set("num_retries_on_failure", r.Body.SingularityRequest.NumRetriesOnFailure)
 	}
 	return nil
@@ -268,4 +266,13 @@ func resourceResourceRequestImport(d *schema.ResourceData, meta interface{}) ([]
 		return nil, err
 	}
 	return []*schema.ResourceData{d}, nil
+}
+
+func checkRequestTypeMatch(r singularity.Request, services ...string) bool {
+	for _, service := range services {
+		if strings.ToUpper(r.RequestType) == strings.ToUpper(service) {
+			return true
+		}
+	}
+	return false
 }

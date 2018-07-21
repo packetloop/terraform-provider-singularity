@@ -261,3 +261,62 @@ func TestAccSingularityRequestSlavePlacement(t *testing.T) {
 		},
 	})
 }
+
+func TestCheckRequestTypeMatch(t *testing.T) {
+	var data = []struct {
+		resp         singularity.Request
+		requestA     string
+		requestB     string
+		requestC     string
+		expectedBool bool
+	}{
+		{
+			singularity.Request{
+				SingularityRequest: singularity.SingularityRequest{
+					RequestType: "SCHEDULED",
+				},
+			},
+			"SCHEDULED", "RUN_ONCE", "ON_DEMAND",
+			true,
+		},
+	}
+
+	for _, tt := range data {
+		val := checkRequestTypeMatch(tt.resp, tt.requestA, tt.requestB, tt.requestC)
+		if val != tt.expectedBool {
+			t.Errorf("checkRequestTypeMatch(%v, %v, %v, %v): expected %v, got %v",
+				tt.resp.RequestType,
+				tt.requestA,
+				tt.requestB,
+				tt.requestC,
+				tt.expectedBool,
+				val)
+		}
+	}
+	var data2 = []struct {
+		resp         singularity.Request
+		requestA     string
+		expectedBool bool
+	}{
+		{
+			singularity.Request{
+				SingularityRequest: singularity.SingularityRequest{
+					RequestType: "SCHEDULED",
+				},
+			},
+			"SCHEDULED",
+			true,
+		},
+	}
+
+	for _, tt := range data2 {
+		val := checkRequestTypeMatch(tt.resp, tt.requestA)
+		if val != tt.expectedBool {
+			t.Errorf("checkRequestTypeMatch(%v, %v): expected %v, got %v",
+				tt.resp.RequestType,
+				tt.requestA,
+				tt.expectedBool,
+				val)
+		}
+	}
+}
