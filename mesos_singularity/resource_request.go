@@ -194,16 +194,19 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	d.Set("request_type", r.Body.SingularityRequest.RequestType)
-	d.Set("instances", r.Body.SingularityRequest.Instances)
 	d.Set("slave_placement", r.Body.SingularityRequest.SlavePlacement)
 
+	// These two types of request does not expect instance number set.
+	if checkRequestTypeMatch(r.Body, "ON_DEMAND", "RUN_ONCE") {
+		d.Set("instances", r.Body.SingularityRequest.Instances)
+	}
 	// Only a scheuled type service expect below parameters.
 	if checkRequestTypeMatch(r.Body, "SCHEDULED") {
 		d.Set("schedule", r.Body.SingularityRequest.Schedule)
 		d.Set("schedule_type", r.Body.SingularityRequest.ScheduleType)
 	}
 
-	// Only a service or run_once or on_demand type expect below parameters.i
+	// Only a service or run_once or on_demand type expect below parameters.
 	if checkRequestTypeMatch(r.Body, "SCHEDULED", "RUN_ONCE", "ON_DEMAND") {
 		d.Set("num_retries_on_failure", r.Body.SingularityRequest.NumRetriesOnFailure)
 	}
