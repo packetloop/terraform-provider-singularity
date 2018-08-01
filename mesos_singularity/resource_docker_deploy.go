@@ -5,6 +5,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/cydev/zero"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-singularity"
 )
@@ -70,7 +72,8 @@ func resourceDockerDeploy() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
-			"envs": envSchema(),
+			"envs":     envSchema(),
+			"metadata": envSchema(),
 			// We use typeSet because this parameter can be unordered list and must be unique.
 			"port_mapping": &schema.Schema{
 				Type:     schema.TypeSet,
@@ -181,7 +184,9 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	if r.RestyResponse.StatusCode() == 404 {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
-	// A request exists does not mean a deploy exist. Hence, we do a check.
+	if r.RestyResponse.StatusCode() == 400 {
+		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
+	}
 	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
@@ -343,26 +348,29 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 // No changes to the remote resource are to be made.
 func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	client := clientConn(m)
+	//deploy_id := d.Get("deploy_id").(string)
+	//r, err := client.GetRequestByID(d.Get("request_id").(string))
+	//log.Printf("[TRACE] Deploy Read HTTP Response %v", r.Body)
 
 	// Expensive loop. Only use this during import because we don't have access to other attributes than
 	// GetID(). Otherwise, use getrequestsbyid.
-	res, b, err := client.GetRequests()
+	_, b, err := client.GetRequests()
 	if err != nil {
 		d.SetId("")
 		return err
 	}
-	log.Printf("[TRACE] Deploy Read HTTP Response %v", string(res.Body()))
 	id := d.Id()
 	c := b.GetRequestID(id)
+	//log.Printf("[TRACE] Deploy Read HTTP Response %v", string(res.Body()))
 	r, err := client.GetRequestByID(c.SingularityRequest.ID)
 	if err != nil {
 		d.SetId("")
 		return err
 	}
 	// When we create a service request, a deploy does not run immediately by default
-	// and deploy would be in pending state.
-	if r.Body.SingularityRequest.RequestType == "SERVICE" {
-		//time.Sleep(360 * time.Second)
+	// and deploy would be in pending state. Hence, we just check if struct is empty
+	// and if it is empty, we use activedeploy object instead.
+	if zero.IsZero(r.Body.ActiveDeploy.ID) {
 		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
 		d.Set("network", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network)
 		d.Set("image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image)
@@ -371,11 +379,12 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("memory", r.Body.PendingDeploy.MemoryMb)
 		d.Set("num_ports", r.Body.PendingDeploy.NumPorts)
 		d.Set("command", r.Body.PendingDeploy.Command)
-		d.Set("envs", r.Body.PendingDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
+		d.Set("envs", r.Body.PendingDeploy.TaskEnv)
 		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.PendingDeploy.Uris)
 		d.Set("force_pull_image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage)
+		d.Set("metadata", r.Body.PendingDeploy.Metadata)
 	} else {
 		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
 		d.Set("network", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network)
@@ -385,11 +394,12 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("memory", r.Body.ActiveDeploy.MemoryMb)
 		d.Set("num_ports", r.Body.ActiveDeploy.NumPorts)
 		d.Set("command", r.Body.ActiveDeploy.Command)
-		d.Set("envs", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.SingularityDockerParameters)
+		d.Set("envs", r.Body.ActiveDeploy.Env)
 		d.Set("port_mapping", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.ActiveDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.ActiveDeploy.Uris)
 		d.Set("force_pull_image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage)
+		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	return nil
