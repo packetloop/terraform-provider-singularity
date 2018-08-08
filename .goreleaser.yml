@@ -20,4 +20,4 @@ changelog:
     - '^docs:'
     - '^test:'
 release:
-  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  name_template: "{{ .ProjectName }}_v{{ .Version }}"
