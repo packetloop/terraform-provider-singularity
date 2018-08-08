@@ -14,6 +14,7 @@ dep:
 	go get github.com/tcnksm/ghr
 	go get github.com/mitchellh/gox
 	go get github.com/golang/dep/cmd/dep
+	go get github.com/goreleaser/goreleaser
 
 .PHONY: env
 env:
@@ -28,3 +29,18 @@ build: dep
 .PHONY: build-local
 build-local: dep
 	go build -o examples/terraform-provider-singularity
+
+.PHONY: create-tag
+create-tag: next-tag
+	 git fetch --tags packetloop
+	 git tag -a v$(TAG) -m "v$(TAG)"
+
+.PHONY: release
+release: dep
+	goreleaser
+
+.PHONY: next-tag
+next-tag:
+ifndef TAG
+	$(error TAG is not set)
+endif
