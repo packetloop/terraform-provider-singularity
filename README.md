@@ -11,9 +11,10 @@ Usage:
 To download this provider, pick version you'd like to download at https://github.com/packetloop/terraform-provider-singularity/releases.
 
 ```bash
-curl \
+curl -L \
   https://github.com/packetloop/terraform-provider-singularity/releases/download/v0.1.0/terraform-provider-singularity_v0.1.0_Darwin_x86_64 \
-  -o ~/.terraform.d/plugins/terraform-provider-singularity_v0.1.0
+  -o ~/.terraform.d/plugins/terraform-provider-singularity_v0.1.0 && \
+  chmod +x ~/.terraform.d/plugins/terraform-provider-singularity_v0.1.0
 ```
 
 ```bash
