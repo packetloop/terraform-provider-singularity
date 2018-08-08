@@ -34,6 +34,7 @@ build-local: dep
 create-tag: next-tag
 	 git fetch --tags packetloop
 	 git tag -a v$(TAG) -m "v$(TAG)"
+	 git push packetloop v$(TAG)
 
 .PHONY: release
 release: dep
