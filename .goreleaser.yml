@@ -3,7 +3,6 @@
 builds:
 - env:
   - CGO_ENABLED=0
-  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
   goos:
     - windows
     - darwin
@@ -20,3 +19,5 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+release:
+  name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
