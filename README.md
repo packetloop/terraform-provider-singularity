@@ -51,11 +51,5 @@ Syntax
 
 ```
  terraform import singularity_request.lenfree-run <resource ID>
-
+ terraform import singularity_docker_deploy.test-deploy-2 <resource ID>
 ```
-
-For example:
-```
- terraform import singularity_request.lenfree-run lenfree--atlas-feedback-s3--backup-artifacts
-```
-
