@@ -1,14 +1,16 @@
-terraform-provider-singularity
-===============================
+[![CircleCI](https://circleci.com/gh/packetloop/terraform-provider-singularity.svg?style=svg)](https://circleci.com/gh/packetloop/terraform-provider-singularity)
+[![All Contributors](https://img.shields.io/github/contributors/packetloop/terraform-provider-singularity.svg?longCache=true&style=flat-square&colorB=orange&label=all%20contributors)](#contributors)
+[![Github All Releases](https://img.shields.io/github/downloads/packetloop/terraform-provider-singularity/total.svg)]()
+
+
+# terraform-provider-singularity
 
 A terraform provider to manage Mesos hubspot/Singularity objects.
 
-[![CircleCI](https://circleci.com/gh/packetloop/terraform-provider-singularity.svg?style=svg)](https://circleci.com/gh/packetloop/terraform-provider-singularity)
+## Usage:
 
-Usage:
-------
-
-To download this provider, pick version you'd like to download at https://github.com/packetloop/terraform-provider-singularity/releases.
+Download this provider, pick a version you'd like from releases from
+[Binary Releases](https://github.com/packetloop/terraform-provider-singularity/releases)
 
 ```bash
 curl -L \
@@ -39,11 +41,11 @@ resource "singularity_docker_deploy" "test-deploy" {
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.lenfree-demand.id}"
 }
+```
 
 More examples can be found in examples/main.tf.
 
-# Import Resource
------------------
+## Import Resources:
 
 Syntax
 
