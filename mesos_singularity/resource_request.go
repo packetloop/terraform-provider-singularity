@@ -36,7 +36,6 @@ func resourceRequest() *schema.Resource {
 			"num_retries_on_failure": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  3,
 				ForceNew: true,
 			},
 			"schedule": &schema.Schema{
@@ -196,8 +195,8 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("request_type", r.Body.SingularityRequest.RequestType)
 	d.Set("slave_placement", r.Body.SingularityRequest.SlavePlacement)
 
-	// These two types of request does not expect instance number set.
-	if checkRequestTypeMatch(r.Body, "ON_DEMAND", "RUN_ONCE") {
+	// Only these three types of request expects instance number set.
+	if checkRequestTypeMatch(r.Body, "ON_DEMAND", "WORKER", "SERVICE") {
 		d.Set("instances", r.Body.SingularityRequest.Instances)
 	}
 	// Only a scheuled type service expect below parameters.

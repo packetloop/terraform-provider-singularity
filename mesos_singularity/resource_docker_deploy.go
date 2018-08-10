@@ -380,6 +380,39 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("num_ports", r.Body.PendingDeploy.NumPorts)
 		d.Set("command", r.Body.PendingDeploy.Command)
 		d.Set("envs", r.Body.PendingDeploy.TaskEnv)
+		if r.Body.PendingDeploy.Uris != nil {
+			mapURI := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.PendingDeploy.Uris {
+				m := make(map[string]interface{})
+				m["cache"] = a.Cache
+				m["path"] = a.URI
+				m["extract"] = a.Extract
+				m["executable"] = a.Executable
+				mapURI = append(mapURI, m)
+			}
+		}
+		if r.Body.PendingDeploy.ContainerInfo.PortMappings != nil {
+			mapPort := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.PendingDeploy.ContainerInfo.PortMappings {
+				m := make(map[string]interface{})
+				m["container_port"] = a.ContainerPort
+				m["container_port_type"] = a.ContainerPortType
+				m["host_port"] = a.HostPort
+				m["host_port_type"] = a.HostPortType
+				m["protocol"] = a.Protocol
+				mapPort = append(mapPort, m)
+			}
+		}
+		if r.Body.PendingDeploy.ContainerInfo.Volumes != nil {
+			mapVolumes := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.PendingDeploy.ContainerInfo.Volumes {
+				m := make(map[string]interface{})
+				m["host_path"] = a.HostPath
+				m["container_path"] = a.ContainerPath
+				m["mode"] = a.Mode
+				mapVolumes = append(mapVolumes, m)
+			}
+		}
 		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.PendingDeploy.Uris)
@@ -395,9 +428,44 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("num_ports", r.Body.ActiveDeploy.NumPorts)
 		d.Set("command", r.Body.ActiveDeploy.Command)
 		d.Set("envs", r.Body.ActiveDeploy.Env)
-		d.Set("port_mapping", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.PortMappings)
-		d.Set("volume", r.Body.ActiveDeploy.ContainerInfo.Volumes)
-		d.Set("uri", r.Body.ActiveDeploy.Uris)
+
+		if r.Body.ActiveDeploy.Uris != nil {
+			mapURI := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.ActiveDeploy.Uris {
+				m := make(map[string]interface{})
+				m["cache"] = a.Cache
+				m["path"] = a.URI
+				m["extract"] = a.Extract
+				m["executable"] = a.Executable
+				mapURI = append(mapURI, m)
+			}
+			d.Set("uri", mapURI)
+		}
+		if r.Body.ActiveDeploy.ContainerInfo.PortMappings != nil {
+			mapPort := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.ActiveDeploy.ContainerInfo.PortMappings {
+				m := make(map[string]interface{})
+				m["container_port"] = a.ContainerPort
+				m["container_port_type"] = a.ContainerPortType
+				m["host_port"] = a.HostPort
+				m["host_port_type"] = a.HostPortType
+				m["protocol"] = a.Protocol
+				mapPort = append(mapPort, m)
+			}
+			d.Set("port_mapping", mapPort)
+		}
+		if r.Body.ActiveDeploy.ContainerInfo.Volumes != nil {
+			mapVolumes := make([]map[string]interface{}, 0)
+			for _, a := range r.Body.ActiveDeploy.ContainerInfo.Volumes {
+				m := make(map[string]interface{})
+				m["host_path"] = a.HostPath
+				m["container_path"] = a.ContainerPath
+				m["mode"] = a.Mode
+				mapVolumes = append(mapVolumes, m)
+			}
+			d.Set("volume", mapVolumes)
+		}
+
 		d.Set("force_pull_image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
 	}
