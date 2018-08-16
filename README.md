@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/packetloop/terraform-provider-singularity.svg?style=svg)](https://circleci.com/gh/packetloop/terraform-provider-singularity)
+[![Build status](https://circleci.com/gh/packetloop/terraform-provider-singularity.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/packetloop/terraform-provider-singularity)
 [![GitHub release](https://img.shields.io/github/release/packetloop/terraform-provider-singularity.svg)](https://github.com/packetloop/terraform-provider-singularity/releases/)
 [![All Contributors](https://img.shields.io/github/contributors/packetloop/terraform-provider-singularity.svg?longCache=true&style=flat-square&colorB=orange&label=all%20contributors)](#contributors)
 [![Github All Releases](https://img.shields.io/github/downloads/packetloop/terraform-provider-singularity/total.svg)]()
