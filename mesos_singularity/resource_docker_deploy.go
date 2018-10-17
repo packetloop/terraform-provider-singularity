@@ -3,10 +3,10 @@ package mesos_singularity
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/cydev/zero"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-singularity"
 )
@@ -32,20 +32,28 @@ func resourceDockerDeploy() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"cpu": &schema.Schema{
-				Type:     schema.TypeFloat,
-				Optional: true,
-			},
-			"memory": &schema.Schema{
-				Type:     schema.TypeFloat,
-				Optional: true,
-			},
 			"args": &schema.Schema{
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 				Optional: true,
+			},
+			"resources": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"memory_mb": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"cpus": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+					},
+				},
 			},
 			"network": &schema.Schema{
 				Type:         schema.TypeString,
@@ -64,11 +72,6 @@ func resourceDockerDeploy() *schema.Resource {
 			},
 			"force_pull_image": &schema.Schema{
 				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"num_ports": &schema.Schema{
-				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  true,
 			},
@@ -245,33 +248,45 @@ func expandUris(configured []interface{}) ([]singularity.SingularityMesosArtifac
 	return uris, nil
 }
 
+func expandResources(d *schema.ResourceData, portMappings int64) singularity.SingularityDeployResources {
+
+	cpus, err := strconv.ParseFloat(d.Get("resources.cpus").(string), 64)
+	if err != nil {
+		fmt.Errorf("Error converting cpus to float64: %v", err)
+	}
+	memoryMb, err := strconv.ParseFloat(d.Get("resources.memory_mb").(string), 64)
+	if err != nil {
+		fmt.Errorf("Error converting memory_mb to float64: %v", err)
+	}
+
+	return singularity.SingularityDeployResources{
+		Cpus:     cpus,
+		MemoryMb: memoryMb,
+		NumPorts: portMappings,
+	}
+}
+
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("deploy_id").(string))
 	requestID := strings.ToLower(d.Get("request_id").(string))
 	image := d.Get("image").(string)
 	network := d.Get("network").(string)
-	cpu := d.Get("cpu").(float64)
-	memory := d.Get("memory").(float64)
-	numPorts := int64(d.Get("num_ports").(int))
 	forcePullImage := d.Get("force_pull_image").(bool)
 	command := d.Get("command").(string)
 	arguments := d.Get("args").([]interface{})
 	env := make(map[string]string)
 	envs := d.Get("envs").(map[string]interface{})
+
 	for k, v := range envs {
 		env[k] = v.(string)
 	}
 
 	portMappings, err := expandPortMappings(d.Get("port_mapping").(*schema.Set).List())
 
-	if int64(len(portMappings)) > numPorts {
-		return fmt.Errorf("Error: %s", "Resource num_ports shouldbe >= number of port_mapping")
-	}
 	d.SetId(id)
 
 	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
 	uris, err := expandUris(d.Get("uri").(*schema.Set).List())
-
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
@@ -285,11 +300,8 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		},
 		Volumes: dockerVolumes,
 	}
-	resource := singularity.SingularityDeployResources{
-		Cpus:     cpu,
-		MemoryMb: memory,
-		NumPorts: numPorts,
-	}
+
+	resources := expandResources(d, int64(len(portMappings)))
 
 	dep := singularity.NewDeploy(id)
 	dep.SetURIs(uris)
@@ -312,11 +324,10 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
-
 	deploy := containerInfo.SetCommand(command).
 		SetRequestID(requestID).
+		SetResources(resources).
 		SetSkipHealthchecksOnDeploy(true).
-		SetResources(resource).
 		Build()
 
 	resp, err := singularity.NewDeployRequest().
@@ -375,11 +386,22 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("network", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network)
 		d.Set("image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image)
 		d.Set("args", r.Body.PendingDeploy.Arguments)
-		d.Set("cpu", r.Body.PendingDeploy.Cpus)
-		d.Set("memory", r.Body.PendingDeploy.MemoryMb)
-		d.Set("num_ports", r.Body.PendingDeploy.NumPorts)
 		d.Set("command", r.Body.PendingDeploy.Command)
 		d.Set("envs", r.Body.PendingDeploy.TaskEnv)
+
+		cpus := strconv.FormatFloat(r.Body.PendingDeploy.Cpus, 'f', -1, 64)
+		memoryMb := strconv.FormatFloat(r.Body.PendingDeploy.MemoryMb, 'f', -1, 64)
+
+		resources := make(map[string]string)
+		for k, v := range map[string]string{
+			"cpus":      cpus,
+			"memory_mb": memoryMb,
+		} {
+			resources[k] = v
+		}
+
+		d.Set("resources", resources)
+
 		if r.Body.PendingDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
 			for _, a := range r.Body.PendingDeploy.Uris {
@@ -423,11 +445,20 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("network", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network)
 		d.Set("image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image)
 		d.Set("args", r.Body.ActiveDeploy.Arguments)
-		d.Set("cpu", r.Body.ActiveDeploy.Cpus)
-		d.Set("memory", r.Body.ActiveDeploy.MemoryMb)
-		d.Set("num_ports", r.Body.ActiveDeploy.NumPorts)
 		d.Set("command", r.Body.ActiveDeploy.Command)
 		d.Set("envs", r.Body.ActiveDeploy.Env)
+
+		cpus := strconv.FormatFloat(r.Body.ActiveDeploy.Cpus, 'f', -1, 64)
+		memoryMb := strconv.FormatFloat(r.Body.ActiveDeploy.MemoryMb, 'f', -1, 64)
+
+		resources := make(map[string]string)
+		for k, v := range map[string]string{
+			"cpus":      cpus,
+			"memory_mb": memoryMb,
+		} {
+			resources[k] = v
+		}
+		d.Set("resources", resources)
 
 		if r.Body.ActiveDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
@@ -480,8 +511,7 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("deploy_id") ||
 		d.HasChange("image") ||
 		d.HasChange("force_pull_image") ||
-		d.HasChange("cpu") ||
-		d.HasChange("memory") ||
+		d.HasChange("resources") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
 		d.HasChange("env") ||

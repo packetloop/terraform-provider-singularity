@@ -49,11 +49,14 @@ resource "singularity_docker_deploy" "test-deploy" {
   force_pull_image = false
   network          = "BRIDGE"
   image            = "golang:latest"
-  cpu              = 2
-  memory           = 128
   command          = "bash"
   args             = ["-xc", "env"]
   request_id       = "${singularity_request.lenfree-demand.id}"
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
 
   envs {
     MYENV = "Test"
@@ -87,11 +90,14 @@ resource "singularity_docker_deploy" "test-deploy-2" {
   force_pull_image = false
   network          = "BRIDGE"
   image            = "golang:latest"
-  cpu              = 2
-  memory           = 128
   command          = "bash"
   args             = ["-xc", "env"]
   request_id       = "${singularity_request.lenfree-demand.id}"
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
 
   envs {
     MYENV = "Test"
