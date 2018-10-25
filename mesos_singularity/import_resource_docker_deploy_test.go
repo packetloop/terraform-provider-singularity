@@ -28,20 +28,24 @@ func TestAccSingularityDockerDeploy_importBasic(t *testing.T) {
 
 const testAccCheckSingularityDeployDockerConfigImport = `
 resource "singularity_request" "phewphew" {
-	request_id             = "myrequestphewphew"
-	request_type           = "SCHEDULED"
-	schedule               = "0 7 * * *"
-	schedule_type          = "CRON"
+  request_id             = "myrequestphewphew"
+  request_type           = "SCHEDULED"
+  schedule               = "0 7 * * *"
+  schedule_type          = "CRON"
 }
+
 resource "singularity_docker_deploy" "phewphew" {
-	deploy_id        = "mydeployphewphew3"
-	force_pull_image = false
-	network          = "BRIDGE"
-	image            = "golang:latest"
-	cpu              = 2
-	memory           = 128
-	command          = "bash"
-	args             = ["-xc", "date"]
-	request_id       = "${singularity_request.phewphew.id}"
+  deploy_id        = "mydeployphewphew3"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  command          = "bash"
+  args             = ["-xc", "date"]
+  request_id       = "${singularity_request.phewphew.id}"
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
 }
 `

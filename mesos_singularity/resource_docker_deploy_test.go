@@ -28,9 +28,9 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "image", "golang:latest"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "cpu", "2"),
+						"singularity_docker_deploy.foo", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "memory", "128"),
+						"singularity_docker_deploy.foo", "resources.memory_mb", "128"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "command", "bash"),
 					resource.TestCheckResourceAttr(
@@ -58,9 +58,9 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "image", "golang:latest"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "cpu", "2"),
+						"singularity_docker_deploy.bar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "memory", "128"),
+						"singularity_docker_deploy.bar", "resources.memory_mb", "128"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "command", "bash"),
 					resource.TestCheckResourceAttr(
@@ -95,11 +95,9 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "image", "golang:latest"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "cpu", "2"),
+						"singularity_docker_deploy.foobar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "memory", "128"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "num_ports", "2"),
+						"singularity_docker_deploy.foobar", "resources.memory_mb", "128"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "command", "bash"),
 					resource.TestCheckResourceAttr(
@@ -134,11 +132,9 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "image", "golang:latest"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "cpu", "2"),
+						"singularity_docker_deploy.foobaz", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "memory", "128"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "num_ports", "1"),
+						"singularity_docker_deploy.foobaz", "resources.memory_mb", "128"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "command", "bash"),
 					resource.TestCheckResourceAttr(
@@ -157,104 +153,118 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 
 const testAccCheckSingularityDeployDockerConfigDefault = `
 resource "singularity_request" "foo" {
-	request_id             = "myrequest"
-	request_type           = "SCHEDULED"
-	schedule               = "0 7 * * *"
-	schedule_type          = "CRON"
+  request_id             = "myrequest"
+  request_type           = "SCHEDULED"
+  schedule               = "0 7 * * *"
+  schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "foo" {
-			deploy_id        = "mydeploy"
-			force_pull_image = false
-			network          = "BRIDGE"
-			image            = "golang:latest"
-			cpu              = 2
-			memory           = 128
-			command          = "bash"
-			args             = ["-xc", "date"]
-			request_id       = "${singularity_request.foo.id}"
+  deploy_id        = "mydeploy"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  command          = "bash"
+  args             = ["-xc", "date"]
+  request_id       = "${singularity_request.foo.id}"
+
+  resources {
+    cpus              = 2
+    memory_mb          = 128
+  }
 }
 `
 
 const testAccCheckSingularityDeployDockerConfigMaxTasks = `
 resource "singularity_request" "bar" {
-	request_id             = "myrequestbar"
-	request_type           = "SCHEDULED"
-	schedule               = "0 7 * * *"
-	schedule_type          = "CRON"
+  request_id             = "myrequestbar"
+  request_type           = "SCHEDULED"
+  schedule               = "0 7 * * *"
+  schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "bar" {
-	deploy_id        = "mydeploybar"
-	force_pull_image = false
-	network          = "BRIDGE"
-	image            = "golang:latest"
-	cpu              = 2
-	memory           = 128
-	command          = "bash"
-	args             = ["-xc", "date"]
-	request_id       = "${singularity_request.bar.id}"
-	envs {
-		MYENV = "test"
-		NAME  = "lenfree"
-	}
+  deploy_id        = "mydeploybar"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  command          = "bash"
+  args             = ["-xc", "date"]
+  request_id       = "${singularity_request.bar.id}"
+
+  envs {
+    MYENV = "test"
+    NAME  = "lenfree"
+  }
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
 }
 `
 
 const testAccCheckSingularityDeployDockerConfigPortMapping = `
 resource "singularity_request" "foobar" {
-	request_id             = "myrequestfoobar"
-	request_type           = "SERVICE"
-	instances              = 2
+  request_id             = "myrequestfoobar"
+  request_type           = "SERVICE"
+  instances              = 2
 }
 resource "singularity_docker_deploy" "foobar" {
-	deploy_id        = "mydeployfoobar2"
-	force_pull_image = false
-	network          = "BRIDGE"
-	image            = "golang:latest"
-	cpu              = 2
-	memory           = 128
-	num_ports        = 2
-	command          = "bash"
-	args             = ["-xc", "while true; do echo up; done"]
-	request_id       = "${singularity_request.foobar.id}"
-	port_mapping {
-		host_port           = 0
-		container_port      = 10001
-		container_port_type = "LITERAL"
-		host_port_type      = "FROM_OFFER"
-		protocol            = "tcp"
-	}
-	port_mapping {
-		host_port           = 1
-		container_port      = 8080
-		container_port_type = "LITERAL"
-		host_port_type      = "FROM_OFFER"
-		protocol            = "tcp"
-	}
+  deploy_id        = "mydeployfoobar2"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  command          = "bash"
+  args             = ["-xc", "while true; do echo up; done"]
+  request_id       = "${singularity_request.foobar.id}"
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
+
+  port_mapping {
+    host_port           = 0
+    container_port      = 10001
+    container_port_type = "LITERAL"
+    host_port_type      = "FROM_OFFER"
+    protocol            = "tcp"
+  }
+
+  port_mapping {
+    host_port           = 1
+    container_port      = 8080
+    container_port_type = "LITERAL"
+    host_port_type      = "FROM_OFFER"
+    protocol            = "tcp"
+    }
 }
 `
 
 const testAccCheckSingularityDeployDockerConfigVolumes = `
 resource "singularity_request" "foobaz" {
-	request_id             = "myrequestfoobaz"
-	request_type           = "SERVICE"
-	instances              = 1
+  request_id             = "myrequestfoobaz"
+  request_type           = "SERVICE"
+  instances              = 1
 }
 resource "singularity_docker_deploy" "foobaz" {
-	deploy_id        = "mydeployfoobaz2"
-	force_pull_image = false
-	network          = "BRIDGE"
-	image            = "golang:latest"
-	cpu              = 2
-	memory           = 128
-	num_ports        = 1
-	command          = "bash"
-	args             = ["-xc", "while true; do echo up; done"]
-	request_id       = "${singularity_request.foobaz.id}"
-	volume {
-		mode           = "RO"
-		container_path = "/inside/path"
-		host_path      = "/outside/path"
-	}
+  deploy_id        = "mydeployfoobaz2"
+  force_pull_image = false
+  network          = "BRIDGE"
+  image            = "golang:latest"
+  command          = "bash"
+  args             = ["-xc", "while true; do echo up; done"]
+  request_id       = "${singularity_request.foobaz.id}"
+
+  volume {
+    mode           = "RO"
+    container_path = "/inside/path"
+    host_path      = "/outside/path"
+    }
+
+  resources {
+    cpus      = 2
+    memory_mb = 128
+  }
 }
 `
 
