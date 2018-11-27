@@ -23,6 +23,7 @@ curl -L \
 ```bash
 provider "singularity" {
   host    = "localhost"
+  port    = 443
   version = "~> 0.1.0"
 }
 
@@ -53,4 +54,11 @@ Syntax
 ```
  terraform import singularity_request.lenfree-run <resource ID>
  terraform import singularity_docker_deploy.test-deploy-2 <resource ID>
+```
+
+## Development:
+
+```bash
+$ git clone git@github.com:packetloop/terraform-provider-singularity.git
+$ make test
 ```

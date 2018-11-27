@@ -31,8 +31,12 @@ func TestProvider_impl(t *testing.T) {
 
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("HOST"); v == "" {
-		log.Println("[INFO] Test: Using localhost as test host")
+		log.Println("[INFO] Test: Using 'localhost' as test host")
 		os.Setenv("HOST", "localhost")
+	}
+	if v := os.Getenv("PORT"); v != "" {
+		log.Printf("[INFO] Test: Using port '%s'", os.Getenv("PORT"))
+		os.Setenv("PORT", os.Getenv("PORT"))
 	}
 	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
 	if err != nil {

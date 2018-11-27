@@ -14,7 +14,7 @@ jobs:
     steps:
       - checkout
       - run: make vendor
-      - run: HOST=localhost TF_ACC= make test
+      - run: HOST=localhost PORT=443 TF_ACC= make test
 
   deploy:
     <<: *defaults

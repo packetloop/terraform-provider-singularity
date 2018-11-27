@@ -48,6 +48,7 @@ func Provider() terraform.ResourceProvider {
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := Config{
 		Host:  d.Get("host").(string),
+		Port:  d.Get("port").(int),
 		Retry: d.Get("retry").(int),
 	}
 
