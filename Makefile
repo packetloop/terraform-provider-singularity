@@ -3,7 +3,7 @@ package = github.com/packetloop/$(PROJECT_NAME)
 
 .PHONY: test
 test: dep env
-	HOST=$(HOST) TF_ACC=$(TF_ACC) go test -race -cover -v ./...
+	HOST=$(HOST) PORT=$(PORT) TF_ACC=$(TF_ACC) go test -race -cover -v ./...
 
 .PHONY: vendor
 vendor: dep
@@ -20,6 +20,9 @@ dep:
 env:
 ifndef HOST
 	$(error HOST is not set)
+endif
+ifndef PORT
+	$(error PORT is not set)
 endif
 
 .PHONY: build

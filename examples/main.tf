@@ -1,5 +1,6 @@
 provider "singularity" {
   host = "localhost"
+  port = 443
 }
 
 resource "singularity_request" "my-server" {

@@ -5,3 +5,5 @@ terraform-provider-singularity
 terraform.tfstate
 .vscode
 terraform.tfstate.backup
+erl_crash.dump
+release
