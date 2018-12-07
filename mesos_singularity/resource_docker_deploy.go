@@ -55,23 +55,45 @@ func resourceDockerDeploy() *schema.Resource {
 					},
 				},
 			},
-			"network": &schema.Schema{
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "BRIDGE",
-				ValidateFunc: validateDockerNetwork,
-			},
-			"image": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
+			"docker_info": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"image": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						/*
+							Explicitly use string instead of bool due to TF issue on using boolean for
+							schema typeMap section:
+							mapstructure has a "weak" mode where it will do possibly-lossy conversions
+							in order to get values to match the target type. Since HIL asks for all primitives
+							to be strings, mapstructure converts the bool values in our map to strings. And
+							here's the rub: mapstructure uses "1" and "0" as its string representations for
+							boolean values, so HIL ends up seeing a structure like
+							map[string]interface{}{"a": "1", "b": "0"}.
+
+							For more info, please check below links:
+							https://github.com/hashicorp/terraform/issues/13512#issuecomment-295389523
+							 https://github.com/ljfranklin/terraform-resource/issues/60
+						*/
+						"force_pull_image": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "false",
+						},
+						"network": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "BRIDGE",
+							ValidateFunc: validateDockerNetwork,
+						},
+					},
+				},
 			},
 			"command": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
-				Default:  true,
-			},
-			"force_pull_image": &schema.Schema{
-				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
 			},
@@ -248,30 +270,42 @@ func expandUris(configured []interface{}) ([]singularity.SingularityMesosArtifac
 	return uris, nil
 }
 
-func expandResources(d *schema.ResourceData, portMappings int64) singularity.SingularityDeployResources {
+func expandResources(d *schema.ResourceData, portMappings int64) (singularity.SingularityDeployResources, error) {
 
 	cpus, err := strconv.ParseFloat(d.Get("resources.cpus").(string), 64)
 	if err != nil {
-		fmt.Errorf("Error converting cpus to float64: %v", err)
+		return singularity.SingularityDeployResources{}, fmt.Errorf("Error converting cpus to float64: %v", err)
 	}
 	memoryMb, err := strconv.ParseFloat(d.Get("resources.memory_mb").(string), 64)
 	if err != nil {
-		fmt.Errorf("Error converting memory_mb to float64: %v", err)
+		return singularity.SingularityDeployResources{}, fmt.Errorf("Error converting memory_mb to float64: %v", err)
 	}
 
 	return singularity.SingularityDeployResources{
 		Cpus:     cpus,
 		MemoryMb: memoryMb,
 		NumPorts: portMappings,
+	}, nil
+}
+func expandDockerInfo(d *schema.ResourceData, portMappings []singularity.DockerPortMapping) (singularity.DockerInfo, error) {
+	forcePullImage, err := strconv.ParseBool(d.Get("docker_info.force_pull_image").(string))
+	if err != nil {
+		return singularity.DockerInfo{},
+			fmt.Errorf("Error parsing string '%s' to bool: %v",
+				d.Get("docker_info.force_pull_image").(string),
+				err)
 	}
+	return singularity.DockerInfo{
+		ForcePullImage: forcePullImage,
+		Network:        strings.ToUpper(d.Get("docker_info.network").(string)),
+		Image:          d.Get("docker_info.image").(string),
+		PortMappings:   portMappings,
+	}, nil
 }
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	id := strings.ToLower(d.Get("deploy_id").(string))
 	requestID := strings.ToLower(d.Get("request_id").(string))
-	image := d.Get("image").(string)
-	network := d.Get("network").(string)
-	forcePullImage := d.Get("force_pull_image").(bool)
 	command := d.Get("command").(string)
 	arguments := d.Get("args").([]interface{})
 	env := make(map[string]string)
@@ -290,18 +324,21 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
-	info := singularity.ContainerInfo{
-		Type: "DOCKER",
-		DockerInfo: singularity.DockerInfo{
-			ForcePullImage: forcePullImage,
-			Network:        strings.ToUpper(network),
-			Image:          image,
-			PortMappings:   portMappings,
-		},
-		Volumes: dockerVolumes,
+	dockerInfo, err := expandDockerInfo(d, portMappings)
+	if err != nil {
+		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
 
-	resources := expandResources(d, int64(len(portMappings)))
+	info := singularity.ContainerInfo{
+		Type:       "DOCKER",
+		DockerInfo: dockerInfo,
+		Volumes:    dockerVolumes,
+	}
+
+	resources, err := expandResources(d, int64(len(portMappings)))
+	if err != nil {
+		return fmt.Errorf("Create Singularity create deploy error: %v", err)
+	}
 
 	dep := singularity.NewDeploy(id)
 	dep.SetURIs(uris)
@@ -383,7 +420,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	// and if it is empty, we use activedeploy object instead.
 	if zero.IsZero(r.Body.ActiveDeploy.ID) {
 		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
-		d.Set("network", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network)
 		d.Set("image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image)
 		d.Set("args", r.Body.PendingDeploy.Arguments)
 		d.Set("command", r.Body.PendingDeploy.Command)
@@ -401,6 +437,17 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		}
 
 		d.Set("resources", resources)
+
+		dockerInfo := make(map[string]string)
+		for k, v := range map[string]string{
+			"force_pull_image": strconv.FormatBool(r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage),
+			"network":          r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network,
+			"image":            r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image,
+		} {
+			dockerInfo[k] = v
+		}
+
+		d.Set("docker_info", dockerInfo)
 
 		if r.Body.PendingDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
@@ -438,12 +485,9 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.PendingDeploy.Uris)
-		d.Set("force_pull_image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 		d.Set("metadata", r.Body.PendingDeploy.Metadata)
 	} else {
 		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
-		d.Set("network", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network)
-		d.Set("image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image)
 		d.Set("args", r.Body.ActiveDeploy.Arguments)
 		d.Set("command", r.Body.ActiveDeploy.Command)
 		d.Set("envs", r.Body.ActiveDeploy.Env)
@@ -459,6 +503,17 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 			resources[k] = v
 		}
 		d.Set("resources", resources)
+
+		dockerInfo := make(map[string]string)
+		for k, v := range map[string]string{
+			"force_pull_image": strconv.FormatBool(r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage),
+			"network":          r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network,
+			"image":            r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image,
+		} {
+			dockerInfo[k] = v
+		}
+
+		d.Set("docker_info", dockerInfo)
 
 		if r.Body.ActiveDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
@@ -497,7 +552,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 			d.Set("volume", mapVolumes)
 		}
 
-		d.Set("force_pull_image", r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage)
 		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
@@ -509,16 +563,13 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 
 	if d.HasChange("request_id") ||
 		d.HasChange("deploy_id") ||
-		d.HasChange("image") ||
-		d.HasChange("force_pull_image") ||
+		d.HasChange("docker_info") ||
 		d.HasChange("resources") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
 		d.HasChange("env") ||
-		d.HasChange("port_mapping") ||
 		d.HasChange("volume") ||
-		d.HasChange("uri") ||
-		d.HasChange("network") {
+		d.HasChange("uri") {
 		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
 		d.Partial(false)
 		// Singularity deploy is by design idempotent.

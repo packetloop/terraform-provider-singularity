@@ -36,12 +36,15 @@ resource "singularity_request" "phewphew" {
 
 resource "singularity_docker_deploy" "phewphew" {
   deploy_id        = "mydeployphewphew3"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.phewphew.id}"
+
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "golang:latest"
+  }
 
   resources {
     cpus      = 2

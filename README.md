@@ -60,5 +60,18 @@ Syntax
 
 ```bash
 $ git clone git@github.com:packetloop/terraform-provider-singularity.git
+
+# Run unit tests
 $ make test
+
+# Run integration tests with a running Singularity service endpoint
+$ HOST=localhost/singularity PORT=443  TF_ACC=1  go test -race -cover -v ./...
+```
+
+## Create a release:
+
+```bash
+# This will create a tag with prefix v and push to upstream master branch. CircleCI will then
+# build and create a release of this tag.
+$ make create-tag=0.1.3
 ```

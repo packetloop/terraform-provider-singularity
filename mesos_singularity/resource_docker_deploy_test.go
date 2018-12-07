@@ -22,11 +22,11 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "deploy_id", "mydeploy"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "force_pull_image", "false"),
+						"singularity_docker_deploy.foo", "docker_info.force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "network", "BRIDGE"),
+						"singularity_docker_deploy.foo", "docker_info.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "image", "golang:latest"),
+						"singularity_docker_deploy.foo", "docker_info.image", "golang:latest"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -52,11 +52,11 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "deploy_id", "mydeploybar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "force_pull_image", "false"),
+						"singularity_docker_deploy.bar", "docker_info.force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "network", "BRIDGE"),
+						"singularity_docker_deploy.bar", "docker_info.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "image", "golang:latest"),
+						"singularity_docker_deploy.bar", "docker_info.image", "golang:latest"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -89,11 +89,11 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "force_pull_image", "false"),
+						"singularity_docker_deploy.foobar", "docker_info.force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "network", "BRIDGE"),
+						"singularity_docker_deploy.foobar", "docker_info.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "image", "golang:latest"),
+						"singularity_docker_deploy.foobar", "docker_info.image", "golang:latest"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -126,11 +126,11 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobaz2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "force_pull_image", "false"),
+						"singularity_docker_deploy.foobaz", "docker_info.force_pull_image", "false"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "network", "BRIDGE"),
+						"singularity_docker_deploy.foobaz", "docker_info.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "image", "golang:latest"),
+						"singularity_docker_deploy.foobaz", "docker_info.image", "golang:latest"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -160,16 +160,19 @@ resource "singularity_request" "foo" {
 }
 resource "singularity_docker_deploy" "foo" {
   deploy_id        = "mydeploy"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.foo.id}"
 
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "golang:latest"
+  }
+
   resources {
-    cpus              = 2
-    memory_mb          = 128
+    cpus      = 2
+    memory_mb = 128
   }
 }
 `
@@ -183,12 +186,15 @@ resource "singularity_request" "bar" {
 }
 resource "singularity_docker_deploy" "bar" {
   deploy_id        = "mydeploybar"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.bar.id}"
+
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "golang:latest"
+  }
 
   envs {
     MYENV = "test"
@@ -210,12 +216,15 @@ resource "singularity_request" "foobar" {
 }
 resource "singularity_docker_deploy" "foobar" {
   deploy_id        = "mydeployfoobar2"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobar.id}"
+
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "golang:latest"
+  }
 
   resources {
     cpus      = 2
@@ -248,12 +257,15 @@ resource "singularity_request" "foobaz" {
 }
 resource "singularity_docker_deploy" "foobaz" {
   deploy_id        = "mydeployfoobaz2"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
-  command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobaz.id}"
+  command          = "bash"
+
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "golang:latest"
+  }
 
   volume {
     mode           = "RO"
