@@ -64,7 +64,7 @@ $ git clone git@github.com:packetloop/terraform-provider-singularity.git
 # Run unit tests
 $ make test
 
-# Run integration tests with a running Singularity service endpoint
+# Run end to end tests with a running Singularity service endpoint
 $ HOST=localhost/singularity PORT=443  TF_ACC=1  go test -race -cover -v ./...
 ```
 

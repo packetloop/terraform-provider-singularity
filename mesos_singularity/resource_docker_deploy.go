@@ -56,8 +56,9 @@ func resourceDockerDeploy() *schema.Resource {
 				},
 			},
 			"docker_info": {
-				Type:     schema.TypeMap,
+				Type:     schema.TypeList,
 				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"image": &schema.Schema{
@@ -65,21 +66,22 @@ func resourceDockerDeploy() *schema.Resource {
 							Required: true,
 						},
 						/*
-							Explicitly use string instead of bool due to TF issue on using boolean for
-							schema typeMap section:
-							mapstructure has a "weak" mode where it will do possibly-lossy conversions
-							in order to get values to match the target type. Since HIL asks for all primitives
+												Explicitly use string instead of bool due to TF issue on using boolean for
+												schema typeMap section:
+												mapstructure has a "weak" mode where it will do possibly-lossy conversions
+												in order to get values to match the target type. Since HIL asks for all primitives
+										    json.Unmarshal(in, &raw)
 							to be strings, mapstructure converts the bool values in our map to strings. And
-							here's the rub: mapstructure uses "1" and "0" as its string representations for
-							boolean values, so HIL ends up seeing a structure like
-							map[string]interface{}{"a": "1", "b": "0"}.
+												here's the rub: mapstructure uses "1" and "0" as its string representations for
+												boolean values, so HIL ends up seeing a structure like
+												map[string]interface{}{"a": "1", "b": "0"}.
 
-							For more info, please check below links:
-							https://github.com/hashicorp/terraform/issues/13512#issuecomment-295389523
-							 https://github.com/ljfranklin/terraform-resource/issues/60
+												For more info, please check below links:
+												https://github.com/hashicorp/terraform/issues/13512#issuecomment-295389523
+												 https://github.com/ljfranklin/terraform-resource/issues/60
 						*/
 						"force_pull_image": &schema.Schema{
-							Type:     schema.TypeString,
+							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  "false",
 						},
@@ -88,6 +90,39 @@ func resourceDockerDeploy() *schema.Resource {
 							Optional:     true,
 							Default:      "BRIDGE",
 							ValidateFunc: validateDockerNetwork,
+						},
+						// We use typeSet because this parameter can be unordered list and must be unique.
+						"port_mapping": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host_port": &schema.Schema{
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+									"container_port": &schema.Schema{
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+									"container_port_type": &schema.Schema{
+										Type:         schema.TypeString,
+										Optional:     true,
+										ValidateFunc: validateSingularityPortMappingType,
+									},
+									"host_port_type": &schema.Schema{
+										Type:         schema.TypeString,
+										Optional:     true,
+										ValidateFunc: validateSingularityPortMappingType,
+									},
+									"protocol": &schema.Schema{
+										Type:         schema.TypeString,
+										Optional:     true,
+										ValidateFunc: validateSingularityPortProtocol,
+										Default:      "tcp",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -99,39 +134,6 @@ func resourceDockerDeploy() *schema.Resource {
 			},
 			"envs":     envSchema(),
 			"metadata": envSchema(),
-			// We use typeSet because this parameter can be unordered list and must be unique.
-			"port_mapping": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_port": &schema.Schema{
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"container_port": &schema.Schema{
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"container_port_type": &schema.Schema{
-							Type:         schema.TypeString,
-							Optional:     true,
-							ValidateFunc: validateSingularityPortMappingType,
-						},
-						"host_port_type": &schema.Schema{
-							Type:         schema.TypeString,
-							Optional:     true,
-							ValidateFunc: validateSingularityPortMappingType,
-						},
-						"protocol": &schema.Schema{
-							Type:         schema.TypeString,
-							Optional:     true,
-							ValidateFunc: validateSingularityPortProtocol,
-							Default:      "tcp",
-						},
-					},
-				},
-			},
 			"volume": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -219,24 +221,6 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 
 }
 
-func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
-	var portMappings []singularity.DockerPortMapping
-	for _, lRaw := range configured {
-		data := lRaw.(map[string]interface{})
-
-		l := singularity.DockerPortMapping{
-			HostPort:          int64(data["host_port"].(int)),
-			ContainerPort:     int64(data["container_port"].(int)),
-			ContainerPortType: data["container_port_type"].(string),
-			Protocol:          data["protocol"].(string),
-			HostPortType:      data["host_port_type"].(string),
-		}
-
-		portMappings = append(portMappings, l)
-	}
-	return portMappings, nil
-}
-
 func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVolume, error) {
 	var dockerVolumes []singularity.SingularityVolume
 	for _, lRaw := range configured {
@@ -287,18 +271,48 @@ func expandResources(d *schema.ResourceData, portMappings int64) (singularity.Si
 		NumPorts: portMappings,
 	}, nil
 }
-func expandDockerInfo(d *schema.ResourceData, portMappings []singularity.DockerPortMapping) (singularity.DockerInfo, error) {
-	forcePullImage, err := strconv.ParseBool(d.Get("docker_info.force_pull_image").(string))
-	if err != nil {
-		return singularity.DockerInfo{},
-			fmt.Errorf("Error parsing string '%s' to bool: %v",
-				d.Get("docker_info.force_pull_image").(string),
-				err)
+
+func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
+
+	portMappings := []singularity.DockerPortMapping{}
+
+	for _, mRaw := range configured {
+		data := mRaw.(map[string]interface{})
+
+		l := singularity.DockerPortMapping{
+			HostPort:          int64(data["host_port"].(int)),
+			ContainerPort:     int64(data["container_port"].(int)),
+			ContainerPortType: data["container_port_type"].(string),
+			Protocol:          data["protocol"].(string),
+			HostPortType:      data["host_port_type"].(string),
+		}
+
+		portMappings = append(portMappings, l)
 	}
+	return portMappings, nil
+}
+
+func expandDockerInfo(d *schema.ResourceData) (singularity.DockerInfo, error) {
+	a := d.Get("docker_info").([]interface{})
+	var portMappings []singularity.DockerPortMapping
+	var forcePullImage bool
+	var network string
+	var image string
+	for _, i := range a {
+		if i, ok := i.([]interface{}); ok {
+			portMappings, _ = expandPortMappings(i)
+		}
+		if i, ok := i.(map[string]interface{}); ok {
+			forcePullImage = i["force_pull_image"].(bool)
+			network = i["network"].(string)
+			image = i["image"].(string)
+		}
+	}
+
 	return singularity.DockerInfo{
 		ForcePullImage: forcePullImage,
-		Network:        strings.ToUpper(d.Get("docker_info.network").(string)),
-		Image:          d.Get("docker_info.image").(string),
+		Network:        network,
+		Image:          image,
 		PortMappings:   portMappings,
 	}, nil
 }
@@ -315,8 +329,6 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		env[k] = v.(string)
 	}
 
-	portMappings, err := expandPortMappings(d.Get("port_mapping").(*schema.Set).List())
-
 	d.SetId(id)
 
 	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
@@ -324,7 +336,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
-	dockerInfo, err := expandDockerInfo(d, portMappings)
+	dockerInfo, err := expandDockerInfo(d)
 	if err != nil {
 		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
@@ -335,7 +347,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		Volumes:    dockerVolumes,
 	}
 
-	resources, err := expandResources(d, int64(len(portMappings)))
+	resources, err := expandResources(d, int64(1))
 	if err != nil {
 		return fmt.Errorf("Create Singularity create deploy error: %v", err)
 	}
@@ -440,7 +452,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 
 		dockerInfo := make(map[string]string)
 		for k, v := range map[string]string{
-			"force_pull_image": strconv.FormatBool(r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage),
+			"force_pull_image": r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage,
 			"network":          r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network,
 			"image":            r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image,
 		} {
@@ -471,6 +483,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				m["protocol"] = a.Protocol
 				mapPort = append(mapPort, m)
 			}
+			d.Set("docker_info.port_mapping", mapPort)
 		}
 		if r.Body.PendingDeploy.ContainerInfo.Volumes != nil {
 			mapVolumes := make([]map[string]interface{}, 0)
@@ -482,7 +495,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				mapVolumes = append(mapVolumes, m)
 			}
 		}
-		d.Set("port_mapping", r.Body.PendingDeploy.ContainerInfo.DockerInfo.PortMappings)
 		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.PendingDeploy.Uris)
 		d.Set("metadata", r.Body.PendingDeploy.Metadata)
@@ -506,7 +518,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 
 		dockerInfo := make(map[string]string)
 		for k, v := range map[string]string{
-			"force_pull_image": strconv.FormatBool(r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage),
+			"force_pull_image": r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage,
 			"network":          r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network,
 			"image":            r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image,
 		} {
@@ -538,7 +550,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				m["protocol"] = a.Protocol
 				mapPort = append(mapPort, m)
 			}
-			d.Set("port_mapping", mapPort)
+			d.Set("docker_info.port_mapping", mapPort)
 		}
 		if r.Body.ActiveDeploy.ContainerInfo.Volumes != nil {
 			mapVolumes := make([]map[string]interface{}, 0)

@@ -41,7 +41,7 @@ resource "singularity_docker_deploy" "phewphew" {
   request_id       = "${singularity_request.phewphew.id}"
 
   docker_info {
-    force_pull_image = "false"
+    force_pull_image = false
     network          = "BRIDGE"
     image            = "golang:latest"
   }
