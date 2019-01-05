@@ -10,8 +10,7 @@ import (
 
 // Client contains Singularity endpoint for http requests
 type Client struct {
-	Endpoint string
-	Rest     *resty.Client
+	Rest *resty.Client
 }
 
 // Config contains Singularity HTTP endpoint and configuration for
@@ -65,10 +64,10 @@ func (co *config) Build() config {
 func NewClient(c config) *Client {
 	r := resty.New().
 		SetRESTMode().
-		SetRetryCount(c.Retry)
+		SetRetryCount(c.Retry).
+		SetHostURL(endpoint(&c))
 	return &Client{
-		Endpoint: endpoint(&c),
-		Rest:     r,
+		Rest: r,
 	}
 }
 

@@ -1,12 +1,14 @@
 package mesos_singularity
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 
 	"github.com/cydev/zero"
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-singularity"
 )
@@ -57,7 +59,7 @@ func resourceDockerDeploy() *schema.Resource {
 			},
 			"docker_info": {
 				Type:     schema.TypeList,
-				Optional: true,
+				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -65,21 +67,6 @@ func resourceDockerDeploy() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						/*
-												Explicitly use string instead of bool due to TF issue on using boolean for
-												schema typeMap section:
-												mapstructure has a "weak" mode where it will do possibly-lossy conversions
-												in order to get values to match the target type. Since HIL asks for all primitives
-										    json.Unmarshal(in, &raw)
-							to be strings, mapstructure converts the bool values in our map to strings. And
-												here's the rub: mapstructure uses "1" and "0" as its string representations for
-												boolean values, so HIL ends up seeing a structure like
-												map[string]interface{}{"a": "1", "b": "0"}.
-
-												For more info, please check below links:
-												https://github.com/hashicorp/terraform/issues/13512#issuecomment-295389523
-												 https://github.com/ljfranklin/terraform-resource/issues/60
-						*/
 						"force_pull_image": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -218,7 +205,6 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
 	}
 	return true, nil
-
 }
 
 func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVolume, error) {
@@ -268,20 +254,20 @@ func expandResources(d *schema.ResourceData, portMappings int64) (singularity.Si
 	return singularity.SingularityDeployResources{
 		Cpus:     cpus,
 		MemoryMb: memoryMb,
-		NumPorts: portMappings,
+		NumPorts: 2,
 	}, nil
 }
 
-func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMapping, error) {
-
+func expandPortMappings(configured *schema.Set) []singularity.DockerPortMapping {
+	p := configured.List()
 	portMappings := []singularity.DockerPortMapping{}
 
-	for _, mRaw := range configured {
+	for _, mRaw := range p {
 		data := mRaw.(map[string]interface{})
 
 		l := singularity.DockerPortMapping{
-			HostPort:          int64(data["host_port"].(int)),
-			ContainerPort:     int64(data["container_port"].(int)),
+			HostPort:          data["host_port"].(int),
+			ContainerPort:     data["container_port"].(int),
 			ContainerPortType: data["container_port_type"].(string),
 			Protocol:          data["protocol"].(string),
 			HostPortType:      data["host_port_type"].(string),
@@ -289,7 +275,7 @@ func expandPortMappings(configured []interface{}) ([]singularity.DockerPortMappi
 
 		portMappings = append(portMappings, l)
 	}
-	return portMappings, nil
+	return portMappings
 }
 
 func expandDockerInfo(d *schema.ResourceData) (singularity.DockerInfo, error) {
@@ -299,22 +285,21 @@ func expandDockerInfo(d *schema.ResourceData) (singularity.DockerInfo, error) {
 	var network string
 	var image string
 	for _, i := range a {
-		if i, ok := i.([]interface{}); ok {
-			portMappings, _ = expandPortMappings(i)
-		}
 		if i, ok := i.(map[string]interface{}); ok {
 			forcePullImage = i["force_pull_image"].(bool)
 			network = i["network"].(string)
 			image = i["image"].(string)
+			pm := i["port_mapping"].(*schema.Set)
+			portMappings = expandPortMappings(pm)
 		}
 	}
-
 	return singularity.DockerInfo{
 		ForcePullImage: forcePullImage,
 		Network:        network,
 		Image:          image,
 		PortMappings:   portMappings,
 	}, nil
+
 }
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
@@ -338,7 +323,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 
 	dockerInfo, err := expandDockerInfo(d)
 	if err != nil {
-		return fmt.Errorf("Create Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity create deploy error: %v", err)
 	}
 
 	info := singularity.ContainerInfo{
@@ -347,9 +332,9 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		Volumes:    dockerVolumes,
 	}
 
-	resources, err := expandResources(d, int64(1))
+	resources, err := expandResources(d, int64(len(dockerInfo.PortMappings)))
 	if err != nil {
-		return fmt.Errorf("Create Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity create deploy error: %v", err)
 	}
 
 	dep := singularity.NewDeploy(id)
@@ -371,7 +356,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 	containerInfo, err := dep.SetContainerInfo(info)
 
 	if err != nil {
-		return fmt.Errorf("Create Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity create deploy error: %v", err)
 	}
 	deploy := containerInfo.SetCommand(command).
 		SetRequestID(requestID).
@@ -385,7 +370,7 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		Create(client)
 
 	if err != nil {
-		return fmt.Errorf("Create Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity create deploy error: %v", err)
 	}
 
 	return checkDeployResponse(d, m, resp, err)
@@ -396,8 +381,9 @@ func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HT
 	if err != nil {
 		return fmt.Errorf("Create Singularity deploy error: %v", err)
 	}
+
 	if r.RestyResponse.StatusCode() < 200 && r.RestyResponse.StatusCode() > 299 {
-		return fmt.Errorf("Create Singularity deploy error %v: %v", r.RestyResponse.StatusCode(), err)
+		return fmt.Errorf("Create Singularity deploy error: %v, %v", r.RestyResponse.StatusCode(), err)
 	}
 	return resourceDockerDeployRead(d, m)
 }
@@ -427,13 +413,12 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.SetId("")
 		return err
 	}
+
 	// When we create a service request, a deploy does not run immediately by default
 	// and deploy would be in pending state. Hence, we just check if struct is empty
 	// and if it is empty, we use activedeploy object instead.
 	if zero.IsZero(r.Body.ActiveDeploy.ID) {
 		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
-		d.Set("image", r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image)
-		d.Set("args", r.Body.PendingDeploy.Arguments)
 		d.Set("command", r.Body.PendingDeploy.Command)
 		d.Set("envs", r.Body.PendingDeploy.TaskEnv)
 
@@ -447,19 +432,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		} {
 			resources[k] = v
 		}
-
 		d.Set("resources", resources)
-
-		dockerInfo := make(map[string]string)
-		for k, v := range map[string]string{
-			"force_pull_image": r.Body.PendingDeploy.ContainerInfo.DockerInfo.ForcePullImage,
-			"network":          r.Body.PendingDeploy.ContainerInfo.DockerInfo.Network,
-			"image":            r.Body.PendingDeploy.ContainerInfo.DockerInfo.Image,
-		} {
-			dockerInfo[k] = v
-		}
-
-		d.Set("docker_info", dockerInfo)
 
 		if r.Body.PendingDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
@@ -472,19 +445,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				mapURI = append(mapURI, m)
 			}
 		}
-		if r.Body.PendingDeploy.ContainerInfo.PortMappings != nil {
-			mapPort := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.PendingDeploy.ContainerInfo.PortMappings {
-				m := make(map[string]interface{})
-				m["container_port"] = a.ContainerPort
-				m["container_port_type"] = a.ContainerPortType
-				m["host_port"] = a.HostPort
-				m["host_port_type"] = a.HostPortType
-				m["protocol"] = a.Protocol
-				mapPort = append(mapPort, m)
-			}
-			d.Set("docker_info.port_mapping", mapPort)
-		}
 		if r.Body.PendingDeploy.ContainerInfo.Volumes != nil {
 			mapVolumes := make([]map[string]interface{}, 0)
 			for _, a := range r.Body.PendingDeploy.ContainerInfo.Volumes {
@@ -494,10 +454,13 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				m["mode"] = a.Mode
 				mapVolumes = append(mapVolumes, m)
 			}
+			d.Set("volume", mapVolumes)
 		}
-		d.Set("volume", r.Body.PendingDeploy.ContainerInfo.Volumes)
 		d.Set("uri", r.Body.PendingDeploy.Uris)
 		d.Set("metadata", r.Body.PendingDeploy.Metadata)
+		if err = d.Set("docker_info", flattenDockerInfo(r.Body.PendingDeploy.ContainerInfo.DockerInfo)); err != nil {
+			return fmt.Errorf("flatten docker_info from pendingDeploy error: %v", err)
+		}
 	} else {
 		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
 		d.Set("args", r.Body.ActiveDeploy.Arguments)
@@ -516,17 +479,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		}
 		d.Set("resources", resources)
 
-		dockerInfo := make(map[string]string)
-		for k, v := range map[string]string{
-			"force_pull_image": r.Body.ActiveDeploy.ContainerInfo.DockerInfo.ForcePullImage,
-			"network":          r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Network,
-			"image":            r.Body.ActiveDeploy.ContainerInfo.DockerInfo.Image,
-		} {
-			dockerInfo[k] = v
-		}
-
-		d.Set("docker_info", dockerInfo)
-
 		if r.Body.ActiveDeploy.Uris != nil {
 			mapURI := make([]map[string]interface{}, 0)
 			for _, a := range r.Body.ActiveDeploy.Uris {
@@ -539,19 +491,6 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 			}
 			d.Set("uri", mapURI)
 		}
-		if r.Body.ActiveDeploy.ContainerInfo.PortMappings != nil {
-			mapPort := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.ActiveDeploy.ContainerInfo.PortMappings {
-				m := make(map[string]interface{})
-				m["container_port"] = a.ContainerPort
-				m["container_port_type"] = a.ContainerPortType
-				m["host_port"] = a.HostPort
-				m["host_port_type"] = a.HostPortType
-				m["protocol"] = a.Protocol
-				mapPort = append(mapPort, m)
-			}
-			d.Set("docker_info.port_mapping", mapPort)
-		}
 		if r.Body.ActiveDeploy.ContainerInfo.Volumes != nil {
 			mapVolumes := make([]map[string]interface{}, 0)
 			for _, a := range r.Body.ActiveDeploy.ContainerInfo.Volumes {
@@ -563,11 +502,54 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 			}
 			d.Set("volume", mapVolumes)
 		}
-
 		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
+
+		if err = d.Set("docker_info", flattenDockerInfo(r.Body.ActiveDeploy.ContainerInfo.DockerInfo)); err != nil {
+			return fmt.Errorf("flatten docker_info from activeDeploy error: %v", err)
+		}
+		d.Set("args", r.Body.ActiveDeploy.Arguments)
 	}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	return nil
+}
+
+func flattenDockerInfo(in singularity.DockerInfo) []interface{} {
+
+	m := make(map[string]interface{})
+	m["network"] = in.Network
+	m["image"] = in.Image
+	m["force_pull_image"] = in.ForcePullImage
+	m["port_mapping"] = flattenDockerPortMappings(in.PortMappings)
+	return []interface{}{m}
+}
+
+func portMappingHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%d-", m["container_port"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["container_port_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["host_port"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["host_port_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["protocol"].(string)))
+	return hashcode.String(buf.String())
+}
+
+func flattenDockerPortMappings(in []singularity.DockerPortMapping) *schema.Set {
+	s := schema.NewSet(portMappingHash, []interface{}{})
+	for _, v := range in {
+		s.Add(flattenDockerPortMapping(v))
+	}
+	return s
+}
+
+func flattenDockerPortMapping(v singularity.DockerPortMapping) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["container_port"] = v.ContainerPort
+	m["container_port_type"] = v.ContainerPortType
+	m["host_port"] = v.HostPort
+	m["host_port_type"] = v.HostPortType
+	m["protocol"] = v.Protocol
+	return m
 }
 
 func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
@@ -579,8 +561,9 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 		d.HasChange("resources") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
-		d.HasChange("env") ||
+		d.HasChange("envs") ||
 		d.HasChange("volume") ||
+		d.HasChange("metadata") ||
 		d.HasChange("uri") {
 		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
 		d.Partial(false)

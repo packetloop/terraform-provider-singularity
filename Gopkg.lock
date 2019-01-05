@@ -309,11 +309,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f0cc31fd40f6fd5266eebadc7dea906b47d64d48ff2aa02cda6667a347169d67"
+  digest = "1:c439cfbe5a48a40a517300dab864e131918cea1ed2cffbc1d494562ec18d30ee"
   name = "github.com/lenfree/go-singularity"
   packages = ["."]
   pruneopts = ""
-  revision = "cf7f9ca352e024319ef6804de6f6bbe4bde31bf5"
+  revision = "a6987244e36dca86c6465462f8597fa02a86661a"
 
 [[projects]]
   digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
@@ -394,14 +394,6 @@
   pruneopts = ""
   revision = "4dadeb3030eda0273a12382bb2348ffc7c9d1a39"
   version = "v1.0.0"
-
-[[projects]]
-  digest = "1:5f2528735a76ef40733e2e194fd79ae162e8cace4a483b065eff8d65939c67ac"
-  name = "github.com/packetloop/terraform-provider-singularity"
-  packages = ["mesos_singularity"]
-  pruneopts = ""
-  revision = "429f5ffe1025792d96dbfae3f0265b27fa1b099e"
-  version = "v0.1.1"
 
 [[projects]]
   digest = "1:257644eddd6b1722f96711c3ca98c9ef755b77cb9f446e23e5ce03fbabafdcd3"
@@ -576,12 +568,12 @@
   analyzer-version = 1
   input-imports = [
     "github.com/cydev/zero",
+    "github.com/hashicorp/terraform/helper/hashcode",
     "github.com/hashicorp/terraform/helper/resource",
     "github.com/hashicorp/terraform/helper/schema",
     "github.com/hashicorp/terraform/plugin",
     "github.com/hashicorp/terraform/terraform",
     "github.com/lenfree/go-singularity",
-    "github.com/packetloop/terraform-provider-singularity/mesos_singularity",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

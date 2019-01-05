@@ -59,7 +59,7 @@ func (c *Client) GetRequests() (*resty.Response, Requests, error) {
 	var body Requests
 	res, err := c.Rest.
 		R().
-		Get(c.Endpoint + "/api/requests")
+		Get("/api/requests")
 
 	err = c.Rest.JSONUnmarshal(res.Body(), &body)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s Requests) GetRequestID(n string) Request {
 func (c *Client) GetRequestByID(id string) (HTTPResponse, error) {
 	res, err := c.Rest.
 		R().
-		Get(c.Endpoint + "/api/requests/request" + "/" + id)
+		Get("/api/requests/request" + "/" + id)
 
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Get Singularity request not found: %v", err)
@@ -197,7 +197,7 @@ func (r *SingularityRequest) Create(c *Client) (HTTPResponse, error) {
 		R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(r).
-		Post(c.Endpoint + "/api/requests")
+		Post("/api/requests")
 
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Create Singularity request error: %v", err)
@@ -253,7 +253,7 @@ func DeleteRequest(c *Client, r DeleteHTTPRequest) (HTTPResponse, error) {
 func (r DeleteHTTPRequest) delete(c *Client) (HTTPResponse, error) {
 	res, err := c.Rest.
 		R().
-		Delete(c.Endpoint + "/api/requests/request/" + r.id)
+		Delete("/api/requests/request/" + r.id)
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Delete Singularity request error: %v", err)
 	}
@@ -313,7 +313,7 @@ func (r *ScaleHTTPRequest) scale(c *Client) (HTTPResponse, error) {
 		R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(r.SingularityScaleRequest).
-		Put(c.Endpoint + "/api/requests/request/" + r.id + "/scale")
+		Put("/api/requests/request/" + r.id + "/scale")
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Scale Singularity request error: %v", err)
 	}
@@ -397,12 +397,13 @@ func (r *SingularityDeployRequest) Create(c *Client) (HTTPResponse, error) {
 		R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(r).
-		Post(c.Endpoint + "/api/deploys/")
+		Post("/api/deploys/")
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Scale Singularity request error: %v", err)
 	}
 
-	if res.StatusCode() >= 200 && res.StatusCode() <= 299 {
+	// Status code 409 happens when job is still in pending status.
+	if res.StatusCode() >= 200 && res.StatusCode() <= 299 || res.StatusCode() == 409 {
 		// TODO: Maybe use interface and type assertion? Since response would have different types
 		// of responses based on request body sent.
 		var data SingularityRequestParent
@@ -444,7 +445,7 @@ type DeleteHTTPDeploy struct {
 func (r DeleteHTTPDeploy) Delete(c *Client) (HTTPResponse, error) {
 	res, err := c.Rest.
 		R().
-		Delete(c.Endpoint + "/api/deploys/deploy/" + r.deployID + "/request/" + r.requestID)
+		Delete("/api/deploys/deploy/" + r.deployID + "/request/" + r.requestID)
 	if err != nil {
 		return HTTPResponse{}, fmt.Errorf("Delete Singularity deploy  error: %v", err)
 	}
