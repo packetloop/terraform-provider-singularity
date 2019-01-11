@@ -91,7 +91,7 @@ func TestNewClient(t *testing.T) {
 
 	expected := "http://localhost"
 	client := NewClient(c)
-	if client.Endpoint != expected {
+	if client.Rest.HostURL != expected {
 		t.Errorf("Got %v, expected %v", c, expected)
 	}
 }

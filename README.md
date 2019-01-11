@@ -34,14 +34,25 @@ resource "singularity_request" "lenfree-demand" {
 
 resource "singularity_docker_deploy" "test-deploy" {
   deploy_id        = "mydeploy"
-  force_pull_image = false
-  network          = "bridge"
-  image            = "golang:latest"
   cpu              = 2
   memory           = 128
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.lenfree-demand.id}"
+
+  docker_info {
+   force_pull_image = false
+   network          = "BRIDGE"
+   image            = "golang:latest"
+
+   port_mapping {
+     host_port           = 0
+     container_port      = 10001
+     container_port_type = "LITERAL"
+     host_port_type      = "FROM_OFFER"
+     protocol            = "tcp"
+    }
+  }
 }
 ```
 
@@ -60,5 +71,18 @@ Syntax
 
 ```bash
 $ git clone git@github.com:packetloop/terraform-provider-singularity.git
+
+# Run unit tests
 $ make test
+
+# Run end to end tests with a running Singularity service endpoint
+$ HOST=localhost/singularity PORT=443  TF_ACC=1  go test -race -cover -v ./...
+```
+
+## Create a release:
+
+```bash
+# This will create a tag with prefix v and push to upstream master branch. CircleCI will then
+# build and create a release of this tag.
+$ make create-tag=0.1.3
 ```

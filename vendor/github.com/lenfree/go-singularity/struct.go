@@ -135,9 +135,9 @@ type DockerInfo struct {
 
 //https://github.com/HubSpot/Singularity/blob/master/Docs/reference/api.md#model-SingularityDockerPortMapping
 type DockerPortMapping struct {
-	ContainerPort     int64  `json:"containerPort"`
+	ContainerPort     int    `json:"containerPort"`
 	ContainerPortType string `json:"containerPortType,omitempty"` //Allowable values: LITERAL, FROM_OFFER
-	HostPort          int64  `json:"hostPort"`
+	HostPort          int    `json:"hostPort"`
 	HostPortType      string `json:"hostPortType,omitempty"` //Allowable values: LITERAL, FROM_OFFER
 	Protocol          string `json:"protocol,omitempty"`     //Default is tcp
 }

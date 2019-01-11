@@ -27,4 +27,4 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/lenfree/go-mesos-singularity"
+  name = "github.com/lenfree/go-singularity"

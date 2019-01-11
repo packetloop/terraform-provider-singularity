@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	singularity "github.com/lenfree/go-singularity"
 )
@@ -22,11 +23,11 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "deploy_id", "mydeploy"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "force_pull_image", "false"),
+						"singularity_docker_deploy.foo", "docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "network", "BRIDGE"),
+						"singularity_docker_deploy.foo", "docker_info.0.image", "ubuntu"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "image", "golang:latest"),
+						"singularity_docker_deploy.foo", "docker_info.0.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -52,11 +53,11 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "deploy_id", "mydeploybar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "force_pull_image", "false"),
+						"singularity_docker_deploy.bar", "docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "network", "BRIDGE"),
+						"singularity_docker_deploy.bar", "docker_info.0.image", "ubuntu"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "image", "golang:latest"),
+						"singularity_docker_deploy.bar", "docker_info.0.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -87,13 +88,13 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar2"),
+						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar330c"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "force_pull_image", "false"),
+						"singularity_docker_deploy.foobar", "docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "network", "BRIDGE"),
+						"singularity_docker_deploy.foobar", "docker_info.0.image", "ubuntu"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "image", "golang:latest"),
+						"singularity_docker_deploy.foobar", "docker_info.0.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -103,7 +104,7 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "request_id", "myrequestfoobar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "port_mapping.#", "2"),
+						"singularity_docker_deploy.foobar", "docker_info.0.port_mapping.#", "2"),
 					// Skip attribute test for port_mapping because schema.typeSet items are
 					// are stored in state with an index value calculated by the hash of the
 					// attributes of the set according to
@@ -126,11 +127,11 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobaz2"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "force_pull_image", "false"),
+						"singularity_docker_deploy.foobaz", "docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "network", "BRIDGE"),
+						"singularity_docker_deploy.foobaz", "docker_info.0.image", "ubuntu"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "image", "golang:latest"),
+						"singularity_docker_deploy.foobaz", "docker_info.0.network", "BRIDGE"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "resources.cpus", "2"),
 					resource.TestCheckResourceAttr(
@@ -160,16 +161,19 @@ resource "singularity_request" "foo" {
 }
 resource "singularity_docker_deploy" "foo" {
   deploy_id        = "mydeploy"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.foo.id}"
 
+  docker_info {
+    force_pull_image = false
+    network          = "BRIDGE"
+    image            = "ubuntu"
+  }
+
   resources {
-    cpus              = 2
-    memory_mb          = 128
+    cpus      = 2
+    memory_mb = 128
   }
 }
 `
@@ -183,12 +187,15 @@ resource "singularity_request" "bar" {
 }
 resource "singularity_docker_deploy" "bar" {
   deploy_id        = "mydeploybar"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.bar.id}"
+
+  docker_info {
+    force_pull_image = false
+    network          = "BRIDGE"
+    image            = "ubuntu"
+  }
 
   envs {
     MYENV = "test"
@@ -209,34 +216,37 @@ resource "singularity_request" "foobar" {
   instances              = 2
 }
 resource "singularity_docker_deploy" "foobar" {
-  deploy_id        = "mydeployfoobar2"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
+  deploy_id        = "mydeployfoobar330c"
   command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobar.id}"
+
+
+  docker_info {
+    force_pull_image = false
+    network          = "BRIDGE"
+    image            = "ubuntu"
+	port_mapping {
+		host_port           = 1
+		container_port      = 9999
+		container_port_type = "LITERAL"
+		host_port_type      = "FROM_OFFER"
+		protocol            = "tcp"
+	  }
+  
+	  port_mapping {
+		host_port           = 0
+		container_port      = 10001
+		container_port_type = "LITERAL"
+		host_port_type      = "FROM_OFFER"
+		protocol            = "tcp"
+	  }
+  }
 
   resources {
     cpus      = 2
     memory_mb = 128
   }
-
-  port_mapping {
-    host_port           = 0
-    container_port      = 10001
-    container_port_type = "LITERAL"
-    host_port_type      = "FROM_OFFER"
-    protocol            = "tcp"
-  }
-
-  port_mapping {
-    host_port           = 1
-    container_port      = 8080
-    container_port_type = "LITERAL"
-    host_port_type      = "FROM_OFFER"
-    protocol            = "tcp"
-    }
 }
 `
 
@@ -248,18 +258,21 @@ resource "singularity_request" "foobaz" {
 }
 resource "singularity_docker_deploy" "foobaz" {
   deploy_id        = "mydeployfoobaz2"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
-  command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobaz.id}"
+  command          = "bash"
+
+  docker_info {
+    force_pull_image = "false"
+    network          = "BRIDGE"
+    image            = "ubuntu"
+  }
 
   volume {
     mode           = "RO"
     container_path = "/inside/path"
     host_path      = "/outside/path"
-    }
+  }
 
   resources {
     cpus      = 2
@@ -279,24 +292,24 @@ func testCheckSingularityDockerDeployDestroyTest(state *terraform.State) error {
 }
 
 func testCheckSingularityDockerDeployDestroy(state *terraform.State) error {
-	//	for _, res := range state.RootModule().Resources {
-	//		if res.Type != "singularity_destroy" {
-	//			continue
-	//		}
-	//
-	//		requestID := res.Primary.Attributes["request_id"]
-	//
-	//		client := testAccProvider.Meta().(*Conn).sclient
-	//		data, err := client.GetRequestByID(requestID)
-	//		if err != nil {
-	//			return err
-	//		}
-	//		// If request_id does not exists, it gets a response status code 404 Not Found.
-	//		if data.RestyResponse.StatusCode() != 404 {
-	//			continue
-	//		}
-	//		return fmt.Errorf("Request id '%s' still exists", requestID)
+	//for _, res := range state.RootModule().Resources {
+	//	if res.Type != "singularity_destroy" {
+	//		continue
 	//	}
+
+	//	requestID := res.Primary.Attributes["request_id"]
+
+	//	client := testAccProvider.Meta().(*Conn).sclient
+	//	data, err := client.GetRequestByID(requestID)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	// If request_id does not exists, it gets a response status code 404 Not Found.
+	//	if data.RestyResponse.StatusCode() != 404 {
+	//		continue
+	//	}
+	//	return fmt.Errorf("Request id '%s' still exists", requestID)
+	//}
 	return nil
 }
 
@@ -340,11 +353,13 @@ func TestExpandPortMappings(t *testing.T) {
 			},
 		},
 	}
+
 	for _, data := range portMappings {
-		actual, err := expandPortMappings(data.val)
-		if err != nil {
-			t.Errorf("Error %v\n", err)
+		s := schema.NewSet(portMappingHash, []interface{}{})
+		for _, v := range data.val {
+			s.Add(v)
 		}
+		actual := expandPortMappings(s)
 		if diff := reflect.DeepEqual(data.expect, actual); !diff {
 			t.Errorf("Got %+v\n, wants %#+v\n, actual %#+v\n, passed %v\n", diff, data.expect, actual, data.val)
 		}

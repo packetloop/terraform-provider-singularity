@@ -46,13 +46,10 @@ resource "singularity_request" "lenfree-demand" {
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
-  deploy_id        = "mydeploy4"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
-  command          = "bash"
-  args             = ["-xc", "env"]
-  request_id       = "${singularity_request.lenfree-demand.id}"
+  deploy_id  = "mydeploy4ab"
+  command    = "bash"
+  args       = ["-xc", "sleep 10000"]
+  request_id = "${singularity_request.lenfree-service.id}"
 
   resources {
     cpus      = 2
@@ -64,36 +61,26 @@ resource "singularity_docker_deploy" "test-deploy" {
     OWNER = "lenfree"
   }
 
-  port_mapping {
-    host_port           = 0
-    container_port      = 10001
-    container_port_type = "LITERAL"
-    host_port_type      = "FROM_OFFER"
-    protocol            = "tcp"
-  }
+  docker_info {
+    force_pull_image = false
+    network          = "BRIDGE"
+    image            = "golang:latest"
 
-  volume {
-    host_path      = "/outside/path"
-    container_path = "/inside/path"
-    mode           = "RO"
-  }
-
-  uri {
-    path       = "file:///app/config.json"
-    cache      = false
-    executable = false
-    extract    = true
+    port_mapping {
+      host_port           = 0
+      container_port      = 10001
+      container_port_type = "LITERAL"
+      host_port_type      = "FROM_OFFER"
+      protocol            = "tcp"
+    }
   }
 }
 
 resource "singularity_docker_deploy" "test-deploy-2" {
-  deploy_id        = "mydeploy2"
-  force_pull_image = false
-  network          = "BRIDGE"
-  image            = "golang:latest"
-  command          = "bash"
-  args             = ["-xc", "env"]
-  request_id       = "${singularity_request.lenfree-demand.id}"
+  deploy_id  = "mydeploy2"
+  command    = "bash"
+  args       = ["-xc", "env"]
+  request_id = "${singularity_request.lenfree-demand.id}"
 
   resources {
     cpus      = 2
@@ -105,12 +92,18 @@ resource "singularity_docker_deploy" "test-deploy-2" {
     OWNER = "lenfree"
   }
 
-  port_mapping {
-    host_port           = 0
-    container_port      = 10001
-    container_port_type = "LITERAL"
-    host_port_type      = "FROM_OFFER"
-    protocol            = "tcp"
+  docker_info {
+    force_pull_image = false
+    network          = "BRIDGE"
+    image            = "golang:latest"
+
+    port_mapping {
+      host_port           = 0
+      container_port      = 10001
+      container_port_type = "LITERAL"
+      host_port_type      = "FROM_OFFER"
+      protocol            = "tcp"
+    }
   }
 
   volume {
