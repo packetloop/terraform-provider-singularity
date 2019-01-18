@@ -40,17 +40,19 @@ resource "singularity_docker_deploy" "test-deploy" {
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.lenfree-demand.id}"
 
-  docker_info {
-   force_pull_image = false
-   network          = "BRIDGE"
-   image            = "golang:latest"
+  container_info {
+    docker_info {
+     force_pull_image = false
+     network          = "BRIDGE"
+     image            = "golang:latest"
 
-   port_mapping {
-     host_port           = 0
-     container_port      = 10001
-     container_port_type = "LITERAL"
-     host_port_type      = "FROM_OFFER"
-     protocol            = "tcp"
+     port_mapping {
+       host_port           = 0
+       container_port      = 10001
+       container_port_type = "LITERAL"
+       host_port_type      = "FROM_OFFER"
+       protocol            = "tcp"
+      }
     }
   }
 }

@@ -40,17 +40,19 @@ resource "singularity_docker_deploy" "phewphew" {
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.phewphew.id}"
 
-  docker_info {
-    force_pull_image = false
-    network          = "BRIDGE"
-    image            = "ubuntu"
-
-    port_mapping {
-      host_port           = 0
-      container_port      = 8888
-      container_port_type = "LITERAL"
-      host_port_type      = "FROM_OFFER"
-      protocol            = "tcp"
+  container_info{
+    docker_info {
+      force_pull_image = false
+      network          = "BRIDGE"
+      image            = "ubuntu"
+  
+      port_mapping {
+        host_port           = 0
+        container_port      = 8888
+        container_port_type = "LITERAL"
+        host_port_type      = "FROM_OFFER"
+        protocol            = "tcp"
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 provider "singularity" {
-  host = "localhost"
   port = 443
+  host = "localhost"
 }
 
 resource "singularity_request" "my-server" {
@@ -61,23 +61,25 @@ resource "singularity_docker_deploy" "test-deploy" {
     OWNER = "lenfree"
   }
 
-  docker_info {
-    force_pull_image = false
-    network          = "BRIDGE"
-    image            = "golang:latest"
+  container_info {
+    docker_info {
+      force_pull_image = false
+      network          = "BRIDGE"
+      image            = "golang:latest"
 
-    port_mapping {
-      host_port           = 0
-      container_port      = 10001
-      container_port_type = "LITERAL"
-      host_port_type      = "FROM_OFFER"
-      protocol            = "tcp"
+      port_mapping {
+        host_port           = 0
+        container_port      = 10001
+        container_port_type = "LITERAL"
+        host_port_type      = "FROM_OFFER"
+        protocol            = "tcp"
+      }
     }
   }
 }
 
 resource "singularity_docker_deploy" "test-deploy-2" {
-  deploy_id  = "mydeploy2"
+  deploy_id  = "mydeployaa4"
   command    = "bash"
   args       = ["-xc", "env"]
   request_id = "${singularity_request.lenfree-demand.id}"
@@ -92,24 +94,32 @@ resource "singularity_docker_deploy" "test-deploy-2" {
     OWNER = "lenfree"
   }
 
-  docker_info {
-    force_pull_image = false
-    network          = "BRIDGE"
-    image            = "golang:latest"
+  container_info {
+    docker_info {
+      force_pull_image = false
+      network          = "BRIDGE"
+      image            = "golang:latest"
 
-    port_mapping {
-      host_port           = 0
-      container_port      = 10001
-      container_port_type = "LITERAL"
-      host_port_type      = "FROM_OFFER"
-      protocol            = "tcp"
+      port_mapping {
+        host_port           = 0
+        container_port      = 10001
+        container_port_type = "LITERAL"
+        host_port_type      = "FROM_OFFER"
+        protocol            = "tcp"
+      }
     }
-  }
 
-  volume {
-    host_path      = "/outside/path"
-    container_path = "/inside/path"
-    mode           = "RO"
+    volume {
+      host_path      = "/outside/path"
+      container_path = "/inside/path"
+      mode           = "RO"
+    }
+
+    volume {
+      host_path      = "/outside2/path"
+      container_path = "/inside2/path"
+      mode           = "RO"
+    }
   }
 
   uri {

@@ -57,56 +57,86 @@ func resourceDockerDeploy() *schema.Resource {
 					},
 				},
 			},
-			"docker_info": {
+			"container_info": {
 				Type:     schema.TypeList,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"image": &schema.Schema{
-							Type:     schema.TypeString,
+						"docker_info": {
+							Type:     schema.TypeList,
 							Required: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"image": &schema.Schema{
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"force_pull_image": &schema.Schema{
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  "false",
+									},
+									"network": &schema.Schema{
+										Type:         schema.TypeString,
+										Optional:     true,
+										Default:      "BRIDGE",
+										ValidateFunc: validateDockerNetwork,
+									},
+									// We use typeSet because this parameter can be unordered list and must be unique.
+									"port_mapping": &schema.Schema{
+										Type:     schema.TypeSet,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"host_port": &schema.Schema{
+													Type:     schema.TypeInt,
+													Required: true,
+												},
+												"container_port": &schema.Schema{
+													Type:     schema.TypeInt,
+													Required: true,
+												},
+												"container_port_type": &schema.Schema{
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validateSingularityPortMappingType,
+												},
+												"host_port_type": &schema.Schema{
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validateSingularityPortMappingType,
+												},
+												"protocol": &schema.Schema{
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validateSingularityPortProtocol,
+													Default:      "tcp",
+												},
+											},
+										},
+									},
+								},
+							},
 						},
-						"force_pull_image": &schema.Schema{
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  "false",
-						},
-						"network": &schema.Schema{
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "BRIDGE",
-							ValidateFunc: validateDockerNetwork,
-						},
-						// We use typeSet because this parameter can be unordered list and must be unique.
-						"port_mapping": &schema.Schema{
+						"volume": &schema.Schema{
 							Type:     schema.TypeSet,
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"host_port": &schema.Schema{
-										Type:     schema.TypeInt,
+									"host_path": &schema.Schema{
+										Type:     schema.TypeString,
 										Required: true,
 									},
-									"container_port": &schema.Schema{
-										Type:     schema.TypeInt,
+									"container_path": &schema.Schema{
+										Type:     schema.TypeString,
 										Required: true,
 									},
-									"container_port_type": &schema.Schema{
+									"mode": &schema.Schema{
 										Type:         schema.TypeString,
 										Optional:     true,
-										ValidateFunc: validateSingularityPortMappingType,
-									},
-									"host_port_type": &schema.Schema{
-										Type:         schema.TypeString,
-										Optional:     true,
-										ValidateFunc: validateSingularityPortMappingType,
-									},
-									"protocol": &schema.Schema{
-										Type:         schema.TypeString,
-										Optional:     true,
-										ValidateFunc: validateSingularityPortProtocol,
-										Default:      "tcp",
+										ValidateFunc: validateSingularityDockerVolumeMode,
 									},
 								},
 							},
@@ -121,27 +151,6 @@ func resourceDockerDeploy() *schema.Resource {
 			},
 			"envs":     envSchema(),
 			"metadata": envSchema(),
-			"volume": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_path": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"container_path": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"mode": &schema.Schema{
-							Type:         schema.TypeString,
-							Optional:     true,
-							ValidateFunc: validateSingularityDockerVolumeMode,
-						},
-					},
-				},
-			},
 			"uri": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -207,20 +216,26 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 	return true, nil
 }
 
-func expandDockerVolumes(configured []interface{}) ([]singularity.SingularityVolume, error) {
-	var dockerVolumes []singularity.SingularityVolume
-	for _, lRaw := range configured {
-		data := lRaw.(map[string]interface{})
-
-		l := singularity.SingularityVolume{
-			HostPath:      data["host_path"].(string),
-			ContainerPath: data["container_path"].(string),
-			Mode:          data["mode"].(string),
-		}
-
-		dockerVolumes = append(dockerVolumes, l)
+func expandContainerVolume(v map[string]interface{}) singularity.SingularityVolume {
+	return singularity.SingularityVolume{
+		HostPath:      v["host_path"].(string),
+		ContainerPath: v["container_path"].(string),
+		Mode:          v["mode"].(string),
 	}
-	return dockerVolumes, nil
+}
+
+func expandContainerVolumes(configured *schema.Set) []singularity.SingularityVolume {
+	c := configured.List()
+	var dockerVolumes []singularity.SingularityVolume
+	for _, lRaw := range c {
+		data := lRaw.(map[string]interface{})
+		dockerVolumes = append(dockerVolumes, expandContainerVolume(data))
+	}
+	return dockerVolumes
+}
+func expandVolumes(d map[string]interface{}) []singularity.SingularityVolume {
+	v := d["volume"].(*schema.Set)
+	return expandContainerVolumes(v)
 }
 
 func expandUris(configured []interface{}) ([]singularity.SingularityMesosArtifact, error) {
@@ -260,7 +275,7 @@ func expandResources(d *schema.ResourceData, portMappings int64) (singularity.Si
 
 func expandPortMappings(configured *schema.Set) []singularity.DockerPortMapping {
 	p := configured.List()
-	portMappings := []singularity.DockerPortMapping{}
+	var portMappings []singularity.DockerPortMapping
 
 	for _, mRaw := range p {
 		data := mRaw.(map[string]interface{})
@@ -278,8 +293,8 @@ func expandPortMappings(configured *schema.Set) []singularity.DockerPortMapping 
 	return portMappings
 }
 
-func expandDockerInfo(d *schema.ResourceData) (singularity.DockerInfo, error) {
-	a := d.Get("docker_info").([]interface{})
+func expandDockerInfo(d map[string]interface{}) singularity.DockerInfo {
+	a := d["docker_info"].([]interface{})
 	var portMappings []singularity.DockerPortMapping
 	var forcePullImage bool
 	var network string
@@ -298,8 +313,23 @@ func expandDockerInfo(d *schema.ResourceData) (singularity.DockerInfo, error) {
 		Network:        network,
 		Image:          image,
 		PortMappings:   portMappings,
-	}, nil
+	}
+}
 
+func expandContainerInfo(d *schema.ResourceData) singularity.ContainerInfo {
+	a := d.Get("container_info").([]interface{})
+
+	var dockerInfo singularity.DockerInfo
+	var volumes []singularity.SingularityVolume
+	for _, i := range a {
+		dockerInfo = expandDockerInfo(i.(map[string]interface{}))
+		volumes = expandVolumes(i.(map[string]interface{}))
+	}
+	return singularity.ContainerInfo{
+		Type:       "DOCKER",
+		DockerInfo: dockerInfo,
+		Volumes:    volumes,
+	}
 }
 
 func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
@@ -316,23 +346,13 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(id)
 
-	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
 	uris, err := expandUris(d.Get("uri").(*schema.Set).List())
 	log.Printf("Singularity deploy '%s' is being provisioned...", id)
 	client := clientConn(m)
 
-	dockerInfo, err := expandDockerInfo(d)
-	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
-	}
+	info := expandContainerInfo(d)
 
-	info := singularity.ContainerInfo{
-		Type:       "DOCKER",
-		DockerInfo: dockerInfo,
-		Volumes:    dockerVolumes,
-	}
-
-	resources, err := expandResources(d, int64(len(dockerInfo.PortMappings)))
+	resources, err := expandResources(d, int64(len(info.DockerInfo.PortMappings)))
 	if err != nil {
 		return fmt.Errorf("Singularity create deploy error: %v", err)
 	}
@@ -445,20 +465,9 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 				mapURI = append(mapURI, m)
 			}
 		}
-		if r.Body.PendingDeploy.ContainerInfo.Volumes != nil {
-			mapVolumes := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.PendingDeploy.ContainerInfo.Volumes {
-				m := make(map[string]interface{})
-				m["host_path"] = a.HostPath
-				m["container_path"] = a.ContainerPath
-				m["mode"] = a.Mode
-				mapVolumes = append(mapVolumes, m)
-			}
-			d.Set("volume", mapVolumes)
-		}
 		d.Set("uri", r.Body.PendingDeploy.Uris)
 		d.Set("metadata", r.Body.PendingDeploy.Metadata)
-		if err = d.Set("docker_info", flattenDockerInfo(r.Body.PendingDeploy.ContainerInfo.DockerInfo)); err != nil {
+		if err = d.Set("container_info", flattenContainerInfo(r.Body.PendingDeploy.ContainerInfo)); err != nil {
 			return fmt.Errorf("flatten docker_info from pendingDeploy error: %v", err)
 		}
 	} else {
@@ -491,20 +500,9 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 			}
 			d.Set("uri", mapURI)
 		}
-		if r.Body.ActiveDeploy.ContainerInfo.Volumes != nil {
-			mapVolumes := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.ActiveDeploy.ContainerInfo.Volumes {
-				m := make(map[string]interface{})
-				m["host_path"] = a.HostPath
-				m["container_path"] = a.ContainerPath
-				m["mode"] = a.Mode
-				mapVolumes = append(mapVolumes, m)
-			}
-			d.Set("volume", mapVolumes)
-		}
 		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
 
-		if err = d.Set("docker_info", flattenDockerInfo(r.Body.ActiveDeploy.ContainerInfo.DockerInfo)); err != nil {
+		if err = d.Set("container_info", flattenContainerInfo(r.Body.ActiveDeploy.ContainerInfo)); err != nil {
 			return fmt.Errorf("flatten docker_info from activeDeploy error: %v", err)
 		}
 		d.Set("args", r.Body.ActiveDeploy.Arguments)
@@ -513,14 +511,43 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func flattenDockerInfo(in singularity.DockerInfo) []interface{} {
+func flattenContainerInfo(in singularity.ContainerInfo) []interface{} {
+	m := make(map[string]interface{})
+	m["docker_info"] = flattenDockerInfo(in.DockerInfo)
+	m["volume"] = flattenContainerVolumes(in.Volumes)
+	return []interface{}{m}
+}
 
+func flattenDockerInfo(in singularity.DockerInfo) []interface{} {
 	m := make(map[string]interface{})
 	m["network"] = in.Network
 	m["image"] = in.Image
 	m["force_pull_image"] = in.ForcePullImage
 	m["port_mapping"] = flattenDockerPortMappings(in.PortMappings)
 	return []interface{}{m}
+}
+func flattenContainerVolumes(in []singularity.SingularityVolume) *schema.Set {
+	s := schema.NewSet(containerVolumeHash, []interface{}{})
+	for _, v := range in {
+		s.Add(flattenContainerVolume(v))
+	}
+	return s
+}
+func containerVolumeHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["host_path"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["container_path"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["mode"].(string)))
+	return hashcode.String(buf.String())
+}
+
+func flattenContainerVolume(v singularity.SingularityVolume) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["host_path"] = v.HostPath
+	m["container_path"] = v.ContainerPath
+	m["mode"] = v.Mode
+	return m
 }
 
 func portMappingHash(v interface{}) int {
@@ -557,12 +584,11 @@ func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
 
 	if d.HasChange("request_id") ||
 		d.HasChange("deploy_id") ||
-		d.HasChange("docker_info") ||
+		d.HasChange("container_info") ||
 		d.HasChange("resources") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
 		d.HasChange("envs") ||
-		d.HasChange("volume") ||
 		d.HasChange("metadata") ||
 		d.HasChange("uri") {
 		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
