@@ -33,7 +33,6 @@ resource "singularity_request" "lenfree-demand" {
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
-  deploy_id        = "mydeploy"
   cpu              = 2
   memory           = 128
   command          = "bash"

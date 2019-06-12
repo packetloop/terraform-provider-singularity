@@ -46,7 +46,6 @@ resource "singularity_request" "lenfree-demand" {
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
-  deploy_id  = "mydeploy4ab"
   command    = "bash"
   args       = ["-xc", "sleep 10000"]
   request_id = "${singularity_request.lenfree-service.id}"
@@ -79,7 +78,6 @@ resource "singularity_docker_deploy" "test-deploy" {
 }
 
 resource "singularity_docker_deploy" "test-deploy-2" {
-  deploy_id  = "mydeployaa4"
   command    = "bash"
   args       = ["-xc", "env"]
   request_id = "${singularity_request.lenfree-demand.id}"
