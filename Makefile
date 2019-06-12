@@ -14,6 +14,7 @@ dep:
 	go get github.com/tcnksm/ghr
 	go get github.com/mitchellh/gox
 	go get github.com/golang/dep/cmd/dep
+	go get github.com/google/go-github/github
 	go get github.com/goreleaser/goreleaser
 
 .PHONY: env
