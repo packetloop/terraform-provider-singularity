@@ -3,25 +3,25 @@ package mesos_singularity
 import (
 	"testing"
 
-  "github.com/hashicorp/terraform/helper/resource"
-  singularity "github.com/lenfree/go-singularity"
+	"github.com/hashicorp/terraform/helper/resource"
+	singularity "github.com/lenfree/go-singularity"
 
 )
 
 func TestGetDeployMD5(t *testing.T) {
-  d := singularity.NewDeploy("my").
-    SetCommand("bash").
-    SetRequestID("test")
+	d := singularity.NewDeploy("my").
+		SetCommand("bash").
+		SetRequestID("test")
 
-  r := singularity.NewDeployRequest().
-    AttachDeploy(d).
-    Build()
+	r := singularity.NewDeployRequest().
+		AttachDeploy(d).
+		Build()
 
-  expected := "cfd8e5a207488d876b4a041d2824d1f9"
-  sum := calculateDeployMD5(r)
-  if sum != expected {
-      t.Errorf("getDeploy(%+v), expected %v, got %v", r, sum, expected)
-  }
+	expected := "cfd8e5a207488d876b4a041d2824d1f9"
+	sum := calculateDeployMD5(r)
+	if sum != expected {
+		t.Errorf("getDeploy(%+v), expected %v, got %v", r, sum, expected)
+	}
 }
 func TestAccSingularityDockerDeploy_importBasic(t *testing.T) {
 	resourceName := "singularity_docker_deploy.phewphew"
