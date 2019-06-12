@@ -214,10 +214,11 @@ func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, 
 func expandContainerVolume(v map[string]interface{}) singularity.SingularityVolume {
 	return singularity.SingularityVolume{
 		HostPath:      v["host_path"].(string),
-		ContainerPath: v["container_path"].(string),
-		Mode:          v["mode"].(string),
-	}
+			ContainerPath: v["container_path"].(string),
+			Mode:          v["mode"].(string),
+		}
 }
+
 
 func expandContainerVolumes(configured *schema.Set) []singularity.SingularityVolume {
 	c := configured.List()
@@ -349,7 +350,6 @@ func buildDeployRequest(d *schema.ResourceData) singularity.DeployRequest {
 		env[k] = v.(string)
 	}
 
-	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
 	uris, _:= expandUris(d.Get("uri").(*schema.Set).List())
 
 	info := expandContainerInfo(d)

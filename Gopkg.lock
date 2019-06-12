@@ -309,11 +309,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c439cfbe5a48a40a517300dab864e131918cea1ed2cffbc1d494562ec18d30ee"
+  digest = "1:20b8db0dfb32036c72d490e7a191733029c5fef3cc331f281124b6f222084334"
   name = "github.com/lenfree/go-singularity"
   packages = ["."]
   pruneopts = ""
-  revision = "a6987244e36dca86c6465462f8597fa02a86661a"
+  revision = "4b9c4cafc2f3488ad6ca52f4fd06ff3de3535323"
 
 [[projects]]
   digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
@@ -568,7 +568,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/cydev/zero",
-    "github.com/hashicorp/terraform/helper/hashcode",
     "github.com/hashicorp/terraform/helper/resource",
     "github.com/hashicorp/terraform/helper/schema",
     "github.com/hashicorp/terraform/plugin",
