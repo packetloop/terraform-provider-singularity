@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"crypto/md5"
 	"github.com/cydev/zero"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -27,7 +28,8 @@ func resourceDockerDeploy() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"deploy_id": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Computed: true,
+				ForceNew: true,
 			},
 			"request_id": &schema.Schema{
 				Type:     schema.TypeString,
@@ -187,13 +189,6 @@ func envSchema() *schema.Schema {
 	}
 }
 
-func resourceDockerDeployCreate(d *schema.ResourceData, m interface{}) error {
-
-	id := d.Get("deploy_id").(string)
-	d.SetId(id)
-	return createDockerDeploy(d, m)
-}
-
 func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, e error) {
 
 	// Exists - This is called to verify a resource still exists. It is called prior to Read,
@@ -332,32 +327,36 @@ func expandContainerInfo(d *schema.ResourceData) singularity.ContainerInfo {
 	}
 }
 
-func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
-	id := strings.ToLower(d.Get("deploy_id").(string))
+func resourceDockerDeployCreate(d *schema.ResourceData, m interface{}) error {
+
+	id := calculateDeployMD5(buildDeployRequest(d))
+	d.SetId(id)
+	return createDockerDeploy(d, m)
+}
+
+func calculateDeployMD5(input singularity.DeployRequest) string{
+	data := []byte(fmt.Sprintf("%v", input))
+	return fmt.Sprintf("%x", md5.Sum(data))
+}
+
+func buildDeployRequest(d *schema.ResourceData) singularity.DeployRequest {
 	requestID := strings.ToLower(d.Get("request_id").(string))
 	command := d.Get("command").(string)
 	arguments := d.Get("args").([]interface{})
 	env := make(map[string]string)
 	envs := d.Get("envs").(map[string]interface{})
-
 	for k, v := range envs {
 		env[k] = v.(string)
 	}
 
-	d.SetId(id)
-
-	uris, err := expandUris(d.Get("uri").(*schema.Set).List())
-	log.Printf("Singularity deploy '%s' is being provisioned...", id)
-	client := clientConn(m)
+	dockerVolumes, err := expandDockerVolumes(d.Get("volume").(*schema.Set).List())
+	uris, _:= expandUris(d.Get("uri").(*schema.Set).List())
 
 	info := expandContainerInfo(d)
 
-	resources, err := expandResources(d, int64(len(info.DockerInfo.PortMappings)))
-	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
-	}
+	resources, _:= expandResources(d, int64(len(info.DockerInfo.PortMappings)))
 
-	dep := singularity.NewDeploy(id)
+	dep := singularity.NewDeploy("")
 	dep.SetURIs(uris)
 
 	// Move this to a map function.
@@ -373,25 +372,33 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		dep = dep.SetEnv(env)
 	}
 
-	containerInfo, err := dep.SetContainerInfo(info)
+	containerInfo, _ := dep.SetContainerInfo(info)
 
-	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
-	}
 	deploy := containerInfo.SetCommand(command).
 		SetRequestID(requestID).
 		SetResources(resources).
 		SetSkipHealthchecksOnDeploy(true).
 		Build()
 
-	resp, err := singularity.NewDeployRequest().
+	resp := singularity.NewDeployRequest().
 		AttachDeploy(deploy).
-		Build().
-		Create(client)
+		Build()
 
+	return resp
+}
+
+func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
+	client := clientConn(m)
+	// Workaround update ID with md5sum of config params
+	md5 := calculateDeployMD5(buildDeployRequest(d))
+	deployRequest := buildDeployRequest(d).SetID(md5)
+
+	log.Printf("Singularity deploy '%s' is being provisioned...", md5)
+	resp, err := deployRequest.Create(client)
 	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity ID: %v deploy error: %v", d.Get("ID"), err)
 	}
+
 
 	return checkDeployResponse(d, m, resp, err)
 }
@@ -425,6 +432,7 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 		d.SetId("")
 		return err
 	}
+	log.Printf("[TRACE] GETT %v", d)
 	id := d.Id()
 	c := b.GetRequestID(id)
 	//log.Printf("[TRACE] Deploy Read HTTP Response %v", string(res.Body()))

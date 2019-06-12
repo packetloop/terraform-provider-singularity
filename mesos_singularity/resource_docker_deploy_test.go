@@ -21,7 +21,7 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foo"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "deploy_id", "mydeploy"),
+						"singularity_docker_deploy.foo", "deploy_id", "2f681c6828d7c73507e596e1430cc0d6"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -51,7 +51,7 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.bar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "deploy_id", "mydeploybar"),
+						"singularity_docker_deploy.bar", "deploy_id", "98058bbe24b74966e5a7830f18affd7c"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -88,7 +88,7 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobar"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar330c"),
+						"singularity_docker_deploy.foobar", "deploy_id", "33f49a02581c71400369ba4affcafb31"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -125,7 +125,7 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobaz"),
 					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobazz2"),
+						"singularity_docker_deploy.foobaz", "deploy_id", "9451ee93254884a9499164d043a2f0e9"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -160,7 +160,6 @@ resource "singularity_request" "foo" {
   schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "foo" {
-  deploy_id        = "mydeploy"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.foo.id}"
@@ -187,7 +186,6 @@ resource "singularity_request" "bar" {
   schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "bar" {
-  deploy_id        = "mydeploybar"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.bar.id}"
@@ -218,7 +216,6 @@ resource "singularity_request" "foobar" {
   instances              = 2
 }
 resource "singularity_docker_deploy" "foobar" {
-  deploy_id        = "mydeployfoobar330c"
   command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobar.id}"
@@ -261,7 +258,6 @@ resource "singularity_request" "foobaz" {
   instances              = 1
 }
 resource "singularity_docker_deploy" "foobaz" {
-  deploy_id        = "mydeployfoobazz2"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobaz.id}"
   command          = "bash"
