@@ -6,7 +6,7 @@ defaults: &defaults
   working_directory: /go/src/github.com/packetloop/terraform-provider-singularity
   docker:
     # specify the version
-    - image: circleci/golang:1.10
+    - image: circleci/golang:1.12
 
 jobs:
   test:
@@ -30,12 +30,14 @@ workflows:
       # all its transitively dependent jobs must also have a filters tags section.
       # ^ This is key, test must have tag filters since deploy requires it.
       - test:
+          context: ops
           filters:
             tags:
               only: /.*/
             branches:
               only: /.*/
       - deploy:
+          context: ops
           requires:
             - test
           filters:
