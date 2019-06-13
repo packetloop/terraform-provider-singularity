@@ -11,9 +11,12 @@ vendor: dep
 
 .PHONY: dep
 dep:
+	$(eval GO111MODULE := on)
+	go get github.com/hashicorp/terraform@v0.12.0
 	go get github.com/tcnksm/ghr
 	go get github.com/mitchellh/gox
-	go get github.com/golang/dep/cmd/dep
+	go mod tidy
+	go mod vendor
 
 .PHONY: env
 env:
