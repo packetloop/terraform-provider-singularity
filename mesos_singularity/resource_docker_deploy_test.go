@@ -20,8 +20,8 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigDefault,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foo"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "deploy_id", "2f681c6828d7c73507e596e1430cc0d6"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foo", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -50,8 +50,8 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigMaxTasks,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.bar"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "deploy_id", "98058bbe24b74966e5a7830f18affd7c"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.bar", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -87,8 +87,8 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigPortMapping,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobar"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "deploy_id", "33f49a02581c71400369ba4affcafb31"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foobar", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -124,8 +124,8 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigVolumes,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobaz"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "deploy_id", "9451ee93254884a9499164d043a2f0e9"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foobaz", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -171,7 +171,7 @@ resource "singularity_docker_deploy" "foo" {
       image            = "ubuntu"
     }
   }
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -197,12 +197,12 @@ resource "singularity_docker_deploy" "bar" {
       image            = "ubuntu"
     }
   }
-  envs {
+  envs = {
     MYENV = "test"
     NAME  = "lenfree"
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -244,7 +244,7 @@ resource "singularity_docker_deploy" "foobar" {
     }
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -270,17 +270,17 @@ resource "singularity_docker_deploy" "foobaz" {
     }
     volume {
       mode           = "RO"
-      container_path = "/root/.aws/config"
-      host_path      = "/root/.aws/config"
+      container_path = "/tmp/config"
+      host_path      = "/tmp/config"
     }
     volume {
       mode           = "RO"
-      container_path = "/root/.aws/credentials"
-      host_path      = "/root/.aws/credentials"
+      container_path = "/tmp/file"
+      host_path      = "/tmp/file"
     }
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }

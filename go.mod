@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/cydev/zero v0.0.0-20160322155811-4a4535dd56e7
+	github.com/dustinkirkland/golang-petname v0.0.0-20190613200456-11339a705ed2
 	github.com/go-resty/resty v0.0.0-20180302063752-65798e030a35 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hashicorp/hcl v0.0.0-20171017181929-23c074d0eceb // indirect

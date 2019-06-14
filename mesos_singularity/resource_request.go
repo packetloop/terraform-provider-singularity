@@ -256,7 +256,8 @@ func deleteRequest(id string) (f func(d *schema.ResourceData, m interface{}) err
 			return err
 		}
 		if resp.RestyResponse.StatusCode() == 404 {
-			return fmt.Errorf("Singularity request ID %v not found", id)
+			// This could have been deleted manually.
+			return nil
 		}
 		d.SetId("")
 		return nil

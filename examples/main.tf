@@ -50,12 +50,12 @@ resource "singularity_docker_deploy" "test-deploy" {
   args       = ["-xc", "sleep 10000"]
   request_id = "${singularity_request.lenfree-service.id}"
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
 
-  envs {
+  envs = {
     MYENV = "Test"
     OWNER = "lenfree"
   }
@@ -82,12 +82,12 @@ resource "singularity_docker_deploy" "test-deploy-2" {
   args       = ["-xc", "env"]
   request_id = "${singularity_request.lenfree-demand.id}"
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
 
-  envs {
+  envs = {
     MYENV = "Test"
     OWNER = "lenfree"
   }
