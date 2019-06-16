@@ -7,14 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	"time"
 	"math/rand"
+	"time"
+
 	"github.com/cydev/zero"
+	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/hashicorp/terraform/helper/customdiff"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/customdiff"
 	singularity "github.com/lenfree/go-singularity"
-	"github.com/dustinkirkland/golang-petname"
 )
 
 func resourceDockerDeploy() *schema.Resource {
@@ -26,16 +27,16 @@ func resourceDockerDeploy() *schema.Resource {
 		Delete: resourceDockerDeployDelete,
 		CustomizeDiff: customdiff.Sequence(
 			customdiff.ComputedIf("deploy_id", func(d *schema.ResourceDiff, meta interface{}) bool {
-			change := d.HasChange("request_id") ||
-				d.HasChange("resources") ||
-				d.HasChange("args") ||
-				d.HasChange("command") ||
-				d.HasChange("envs") || 
-				d.HasChange("uri") 
+				change := d.HasChange("request_id") ||
+					d.HasChange("resources") ||
+					d.HasChange("args") ||
+					d.HasChange("command") ||
+					d.HasChange("envs") ||
+					d.HasChange("uri")
 				// TODO: Dealing with deep nested map is not fun at all.
 				// Make a deep nested compare on has change function to
 				// trigger this function when a param changes
-				// d.HasChange("container_info") 
+				// d.HasChange("container_info")
 				return change
 			}),
 		),
@@ -436,7 +437,6 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 
 	return checkDeployResponse(d, m, resp, err)
 }
-
 
 func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HTTPResponse, err error) error {
 	//log.Printf("[INFO] check Deploy Response HTTP Response %v", r.RestyResponse)

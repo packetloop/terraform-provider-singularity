@@ -5,10 +5,6 @@ package = github.com/packetloop/$(PROJECT_NAME)
 test: dep env
 	HOST=$(HOST) PORT=$(PORT) TF_ACC=$(TF_ACC) go test -race -cover -v ./...
 
-.PHONY: vendor
-vendor: dep
-	dep ensure
-
 .PHONY: dep
 dep:
 	$(eval GO111MODULE := on)

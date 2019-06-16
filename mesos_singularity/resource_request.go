@@ -52,7 +52,6 @@ func resourceRequest() *schema.Resource {
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				ForceNew: true,
 			},
 			"state": &schema.Schema{
 				Type:         schema.TypeString,
@@ -72,10 +71,35 @@ func resourceRequest() *schema.Resource {
 }
 
 func resourceRequestCreate(d *schema.ResourceData, m interface{}) error {
-
 	id := d.Get("request_id").(string)
 	d.SetId(id)
+	log.Printf("[INFO] Creating request id: (%s)", id)
 	return createRequest(d, m)
+}
+
+func resourceScaleRequest(d *schema.ResourceData, m interface{}) error {
+	client := clientConn(m)
+	id := d.Get("request_id").(string)
+	instances := d.Get("instances").(int)
+	message := fmt.Sprintf("scale to %d", instances)
+	// TODO:
+	// Make this configurable
+	increment := 1
+	log.Printf("[INFO] Scale request id: (%s)", id)
+	req := singularity.NewRequestScale(
+		id,
+		message,
+		instances,
+		increment,
+	)
+	resp, err := singularity.ScaleRequest(client, *req)
+	if err != nil {
+		return fmt.Errorf("scale request ID: (%v) error, %v", id, err)
+	}
+	if resp.RestyResponse.StatusCode() == 200 {
+		return nil
+	}
+	return fmt.Errorf("scale request ID: (%v) error, %v", id, err)
 }
 
 func resourceRequestExists(d *schema.ResourceData, m interface{}) (b bool, e error) {
@@ -102,6 +126,12 @@ func createRequest(d *schema.ResourceData, m interface{}) error {
 	requestType := strings.ToLower(d.Get("request_type").(string))
 	instances := int64(d.Get("instances").(int))
 	slavePlacement := strings.ToUpper(d.Get("slave_placement").(string))
+
+	// This is a workaround when Singularity delete existing object. Takes several
+	// seconds normally.
+	timeout := 30
+	log.Printf("[TRACE] WAITING for %d seconds", timeout)
+	time.Sleep(time.Duration(timeout) * time.Second)
 
 	// Singularity expects uppercase of these values and in our validator,
 	// we expect only uppercase to make our resource simpler. Having said
@@ -213,13 +243,11 @@ func resourceRequestRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
-	d.Partial(true)
 
 	if d.HasChange("request_id") ||
 		d.HasChange("schedule") ||
 		d.HasChange("request_type") ||
 		d.HasChange("num_retries_on_failure") ||
-		d.HasChange("instances") ||
 		d.HasChange("schedule_type") ||
 		d.HasChange("slave_placement") {
 		log.Printf("[TRACE] Delete and update existing request id (%s) success", d.Id())
@@ -231,11 +259,10 @@ func resourceRequestUpdate(d *schema.ResourceData, m interface{}) error {
 		if err != nil {
 			return err
 		}
-		// This is a workaround when Singularity delete existing object. Takes a few seconds
-		// normally.
-		time.Sleep(5 * time.Second)
-		d.Partial(false)
 		return resourceRequestCreate(d, m)
+	}
+	if d.HasChange("instances") {
+		return resourceScaleRequest(d, m)
 	}
 	return nil
 }

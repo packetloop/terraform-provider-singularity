@@ -7,13 +7,15 @@ defaults: &defaults
   docker:
     # specify the version
     - image: circleci/golang:1.12
+      environment:
+        GO111MODULE: "ON"
 
 jobs:
   test:
     <<: *defaults
     steps:
       - checkout
-      - run: make vendor
+      - run: make dep
       - run: HOST=localhost PORT=443 TF_ACC= make test
 
   deploy:

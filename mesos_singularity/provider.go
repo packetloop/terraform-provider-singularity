@@ -26,7 +26,7 @@ func Provider() terraform.ResourceProvider {
 			"retry": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("retry", 10),
+				DefaultFunc: schema.EnvDefaultFunc("retry", 3),
 				Description: "Number of times to retry when Singularity makes http requests. Defaults to 3.",
 			},
 		},
