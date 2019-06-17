@@ -22,7 +22,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: make release
+      - run: curl -sL https://git.io/goreleaser | bash
 
 workflows:
   version: 2
