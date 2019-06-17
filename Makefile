@@ -39,7 +39,7 @@ create-tag: next-tag
 
 .PHONY: release
 release:
-	env GO111MODULE=off goreleaser
+	env GO111MODULE=off curl -sL https://git.io/goreleaser | bash
 
 .PHONY: next-tag
 next-tag:
