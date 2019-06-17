@@ -31,3 +31,4 @@ changelog:
     - '^test:'
 release:
   name_template: "{{ .ProjectName }}_v{{ .Version }}"
+  prerelease: true
