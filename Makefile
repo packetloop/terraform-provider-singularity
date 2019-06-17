@@ -39,8 +39,7 @@ create-tag: next-tag
 
 .PHONY: release
 release:
-	unset GO111MODULE && \
-		goreleaser
+	env GO111MODULE=off goreleaser
 
 .PHONY: next-tag
 next-tag:
