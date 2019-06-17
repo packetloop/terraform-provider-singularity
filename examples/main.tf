@@ -1,6 +1,8 @@
 provider "singularity" {
-  port = 443
-  host = "localhost"
+  port    = 443
+  host    = "localhost"
+  version = "~> 1.0.0"
+
 }
 
 resource "singularity_request" "my-server" {
@@ -46,17 +48,16 @@ resource "singularity_request" "lenfree-demand" {
 }
 
 resource "singularity_docker_deploy" "test-deploy" {
-  deploy_id  = "mydeploy4ab"
   command    = "bash"
   args       = ["-xc", "sleep 10000"]
   request_id = "${singularity_request.lenfree-service.id}"
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
 
-  envs {
+  envs = {
     MYENV = "Test"
     OWNER = "lenfree"
   }
@@ -79,17 +80,16 @@ resource "singularity_docker_deploy" "test-deploy" {
 }
 
 resource "singularity_docker_deploy" "test-deploy-2" {
-  deploy_id  = "mydeployaa4"
   command    = "bash"
   args       = ["-xc", "env"]
   request_id = "${singularity_request.lenfree-demand.id}"
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
 
-  envs {
+  envs = {
     MYENV = "Test"
     OWNER = "lenfree"
   }

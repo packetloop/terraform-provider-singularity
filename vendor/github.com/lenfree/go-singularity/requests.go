@@ -352,6 +352,7 @@ type DeployRequest interface {
 	SetMessage(string) DeployRequest
 	AttachDeploy(Deploy) DeployRequest
 	Build() *SingularityDeployRequest
+	SetID(string) *SingularityDeployRequest
 }
 
 // NewDeployRequest returns an empty DeployRequest struct which you could use to set parameters.
@@ -388,6 +389,12 @@ func (r *SingularityDeployRequest) AttachDeploy(d Deploy) DeployRequest {
 
 // Build returns a SingularityDeployRequest object.
 func (r *SingularityDeployRequest) Build() *SingularityDeployRequest {
+	return r
+}
+
+// SetID sets DeployID.
+func (r *SingularityDeployRequest) SetID(id string) *SingularityDeployRequest {
+	r.SingularityDeploy.ID = id
 	return r
 }
 

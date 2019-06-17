@@ -5,16 +5,14 @@ package = github.com/packetloop/$(PROJECT_NAME)
 test: dep env
 	HOST=$(HOST) PORT=$(PORT) TF_ACC=$(TF_ACC) go test -race -cover -v ./...
 
-.PHONY: vendor
-vendor: dep
-	dep ensure
-
 .PHONY: dep
 dep:
+	$(eval GO111MODULE := on)
+	go get github.com/hashicorp/terraform@v0.12.0
 	go get github.com/tcnksm/ghr
 	go get github.com/mitchellh/gox
-	go get github.com/golang/dep/cmd/dep
-	go get github.com/goreleaser/goreleaser
+	go mod tidy
+	go mod vendor
 
 .PHONY: env
 env:

@@ -35,7 +35,6 @@ resource "singularity_request" "phewphew" {
 }
 
 resource "singularity_docker_deploy" "phewphew" {
-  deploy_id        = "mydeployphewphewhello4"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.phewphew.id}"
@@ -56,7 +55,7 @@ resource "singularity_docker_deploy" "phewphew" {
     }
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }

@@ -7,7 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"math/rand"
+	"time"
+
 	"github.com/cydev/zero"
+	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/hashicorp/terraform/helper/customdiff"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	singularity "github.com/lenfree/go-singularity"
@@ -20,6 +25,21 @@ func resourceDockerDeploy() *schema.Resource {
 		Exists: resourceDockerDeployExists,
 		Update: resourceDockerDeployUpdate,
 		Delete: resourceDockerDeployDelete,
+		CustomizeDiff: customdiff.Sequence(
+			customdiff.ComputedIf("deploy_id", func(d *schema.ResourceDiff, meta interface{}) bool {
+				change := d.HasChange("request_id") ||
+					d.HasChange("resources") ||
+					d.HasChange("args") ||
+					d.HasChange("command") ||
+					d.HasChange("envs") ||
+					d.HasChange("uri")
+				// TODO: Dealing with deep nested map is not fun at all.
+				// Make a deep nested compare on has change function to
+				// trigger this function when a param changes
+				// d.HasChange("container_info")
+				return change
+			}),
+		),
 		Importer: &schema.ResourceImporter{
 			State: resourceResourceDockerDeployImport,
 		},
@@ -27,7 +47,7 @@ func resourceDockerDeploy() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"deploy_id": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Computed: true,
 			},
 			"request_id": &schema.Schema{
 				Type:     schema.TypeString,
@@ -187,31 +207,28 @@ func envSchema() *schema.Schema {
 	}
 }
 
-func resourceDockerDeployCreate(d *schema.ResourceData, m interface{}) error {
-
-	id := d.Get("deploy_id").(string)
-	d.SetId(id)
-	return createDockerDeploy(d, m)
-}
-
 func resourceDockerDeployExists(d *schema.ResourceData, m interface{}) (b bool, e error) {
 
 	// Exists - This is called to verify a resource still exists. It is called prior to Read,
 	// and lowers the burden of Read to be able to assume the resource exists.
 	client := clientConn(m)
-	r, err := client.GetRequestByID(d.Get("request_id").(string))
-
+	id := d.Get("request_id").(string)
+	r, err := client.GetRequestByID(id)
 	if err != nil {
 		return false, fmt.Errorf("%v", err)
 	}
-	if r.RestyResponse.StatusCode() == 404 {
-		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
-	}
 	if r.RestyResponse.StatusCode() == 400 {
-		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
+		return false, fmt.Errorf("Request 400 ID: %v, %v", id, string(r.RestyResponse.Body()))
 	}
-	if (r.Body.ActiveDeploy.ID) == "" && (r.Body.RequestDeployState.RequestID == "") {
-		return false, fmt.Errorf("%v", string(r.RestyResponse.Body()))
+	if strings.ToLower(r.Body.State) == ("paused") {
+		return true, fmt.Errorf(
+			"Request ID: %v is in paused state, please unpause before continuing",
+			id,
+		)
+	}
+	if strings.ToLower(r.Body.State) == ("system_cooldown") {
+		log.Printf("[INFO] Request ID: (%v) is in system cooldown state", id)
+		d.MarkNewResource()
 	}
 	return true, nil
 }
@@ -332,32 +349,45 @@ func expandContainerInfo(d *schema.ResourceData) singularity.ContainerInfo {
 	}
 }
 
-func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
-	id := strings.ToLower(d.Get("deploy_id").(string))
+func resourceDockerDeployCreate(d *schema.ResourceData, m interface{}) error {
+	return createDockerDeploy(d, m)
+}
+
+func tagsToMap(tags map[string]interface{}) map[string]string {
+	result := make(map[string]string)
+	for k, v := range tags {
+		result[k] = v.(string)
+	}
+	return result
+}
+
+// tagsFromMap returns the tags for the given map of data.
+func tagsFromMap(m map[string]string) []map[string]string {
+	result := make([]map[string]string, 0, len(m))
+	for k, v := range m {
+		t := map[string]string{
+			k: v,
+		}
+		result = append(result, t)
+	}
+
+	return result
+}
+func buildDeployRequest(d *schema.ResourceData) singularity.DeployRequest {
 	requestID := strings.ToLower(d.Get("request_id").(string))
 	command := d.Get("command").(string)
 	arguments := d.Get("args").([]interface{})
-	env := make(map[string]string)
 	envs := d.Get("envs").(map[string]interface{})
+	//	env := tagsFromMap(envs)
+	env := tagsToMap(envs)
 
-	for k, v := range envs {
-		env[k] = v.(string)
-	}
-
-	d.SetId(id)
-
-	uris, err := expandUris(d.Get("uri").(*schema.Set).List())
-	log.Printf("Singularity deploy '%s' is being provisioned...", id)
-	client := clientConn(m)
+	uris, _ := expandUris(d.Get("uri").(*schema.Set).List())
 
 	info := expandContainerInfo(d)
 
-	resources, err := expandResources(d, int64(len(info.DockerInfo.PortMappings)))
-	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
-	}
+	resources, _ := expandResources(d, int64(len(info.DockerInfo.PortMappings)))
 
-	dep := singularity.NewDeploy(id)
+	dep := singularity.NewDeploy("")
 	dep.SetURIs(uris)
 
 	// Move this to a map function.
@@ -369,43 +399,64 @@ func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
 		dep = dep.SetArgs(args...)
 	}
 
-	if len(env) > 0 {
-		dep = dep.SetEnv(env)
-	}
+	dep = dep.SetEnv(env)
 
-	containerInfo, err := dep.SetContainerInfo(info)
+	containerInfo, _ := dep.SetContainerInfo(info)
 
-	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
-	}
 	deploy := containerInfo.SetCommand(command).
 		SetRequestID(requestID).
 		SetResources(resources).
 		SetSkipHealthchecksOnDeploy(true).
 		Build()
 
-	resp, err := singularity.NewDeployRequest().
+	resp := singularity.NewDeployRequest().
 		AttachDeploy(deploy).
-		Build().
-		Create(client)
+		Build()
 
+	return resp
+}
+
+func generateRandomPetName() string {
+	rand.Seed(time.Now().UnixNano())
+	return petname.Generate(2, "")
+}
+
+func createDockerDeploy(d *schema.ResourceData, m interface{}) error {
+
+	client := clientConn(m)
+	// Workaround update ID with md5sum of config params
+	md5 := generateRandomPetName()
+	d.SetId(md5)
+	deployRequest := buildDeployRequest(d).SetID(md5)
+
+	log.Printf("Singularity deploy '%s' is being provisioned...", md5)
+	resp, err := deployRequest.Create(client)
 	if err != nil {
-		return fmt.Errorf("Singularity create deploy error: %v", err)
+		return fmt.Errorf("Singularity create job deploy ID: %v, error: %+v", d.Get("ID"), err)
 	}
 
 	return checkDeployResponse(d, m, resp, err)
 }
 
 func checkDeployResponse(d *schema.ResourceData, m interface{}, r singularity.HTTPResponse, err error) error {
-	log.Printf("[TRACE] check Deploy Response HTTP Response %v", r.RestyResponse)
+	//log.Printf("[INFO] check Deploy Response HTTP Response %v", r.RestyResponse)
 	if err != nil {
-		return fmt.Errorf("Create Singularity deploy error: %v", err)
+		return fmt.Errorf("Create Singularity Deploy response error: %v", err)
 	}
 
 	if r.RestyResponse.StatusCode() < 200 && r.RestyResponse.StatusCode() > 299 {
-		return fmt.Errorf("Create Singularity deploy error: %v, %v", r.RestyResponse.StatusCode(), err)
+		return fmt.Errorf("Create Singularity Deploy response error: %v, %+v", r.RestyResponse.StatusCode(), err.Error())
 	}
 	return resourceDockerDeployRead(d, m)
+}
+
+func getRequestID(id string, client *singularity.Client) (singularity.HTTPResponse, error) {
+	r, err := client.GetRequestByID(id)
+	if err != nil {
+		return singularity.HTTPResponse{}, fmt.Errorf("Get Singularity Request by ID: %v error: %v, %v", id, r.RestyResponse.StatusCode(), err)
+	}
+	log.Printf("[INFO] GET RESPONSE ID: %v\n, %+v\n", id, r.Body)
+	return r, nil
 }
 
 // resourceRequestRead is called to resync the local state with the remote state.
@@ -427,86 +478,68 @@ func resourceDockerDeployRead(d *schema.ResourceData, m interface{}) error {
 	}
 	id := d.Id()
 	c := b.GetRequestID(id)
-	//log.Printf("[TRACE] Deploy Read HTTP Response %v", string(res.Body()))
-	r, err := client.GetRequestByID(c.SingularityRequest.ID)
+	r, err := getRequestID(c.SingularityRequest.ID, client)
 	if err != nil {
 		d.SetId("")
 		return err
 	}
+	log.Printf("[INFO] ***** %+v", r)
 
 	// When we create a service request, a deploy does not run immediately by default
-	// and deploy would be in pending state. Hence, we just check if struct is empty
-	// and if it is empty, we use activedeploy object instead.
-	if zero.IsZero(r.Body.ActiveDeploy.ID) {
-		d.Set("deploy_id", r.Body.RequestDeployState.PendingDeployState.DeployID)
-		d.Set("command", r.Body.PendingDeploy.Command)
-		d.Set("envs", r.Body.PendingDeploy.TaskEnv)
+	// and deploy would be in pending state. We want to wait for pending task to be
+	// active and return result to user.
+	if r.Body.RequestDeployState.PendingDeployState.DeployID != "" {
 
-		cpus := strconv.FormatFloat(r.Body.PendingDeploy.Cpus, 'f', -1, 64)
-		memoryMb := strconv.FormatFloat(r.Body.PendingDeploy.MemoryMb, 'f', -1, 64)
-
-		resources := make(map[string]string)
-		for k, v := range map[string]string{
-			"cpus":      cpus,
-			"memory_mb": memoryMb,
-		} {
-			resources[k] = v
-		}
-		d.Set("resources", resources)
-
-		if r.Body.PendingDeploy.Uris != nil {
-			mapURI := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.PendingDeploy.Uris {
-				m := make(map[string]interface{})
-				m["cache"] = a.Cache
-				m["path"] = a.URI
-				m["extract"] = a.Extract
-				m["executable"] = a.Executable
-				mapURI = append(mapURI, m)
+		// TODO: Fix this quick workaround retry block.
+		for i := 0; i <= 10; i++ {
+			r, err = getRequestID(c.SingularityRequest.ID, client)
+			if err != nil {
+				d.SetId("")
+				return err
 			}
-		}
-		d.Set("uri", r.Body.PendingDeploy.Uris)
-		d.Set("metadata", r.Body.PendingDeploy.Metadata)
-		if err = d.Set("container_info", flattenContainerInfo(r.Body.PendingDeploy.ContainerInfo)); err != nil {
-			return fmt.Errorf("flatten docker_info from pendingDeploy error: %v", err)
-		}
-	} else {
-		d.Set("deploy_id", r.Body.ActiveDeploy.ID)
-		d.Set("args", r.Body.ActiveDeploy.Arguments)
-		d.Set("command", r.Body.ActiveDeploy.Command)
-		d.Set("envs", r.Body.ActiveDeploy.Env)
-
-		cpus := strconv.FormatFloat(r.Body.ActiveDeploy.Cpus, 'f', -1, 64)
-		memoryMb := strconv.FormatFloat(r.Body.ActiveDeploy.MemoryMb, 'f', -1, 64)
-
-		resources := make(map[string]string)
-		for k, v := range map[string]string{
-			"cpus":      cpus,
-			"memory_mb": memoryMb,
-		} {
-			resources[k] = v
-		}
-		d.Set("resources", resources)
-
-		if r.Body.ActiveDeploy.Uris != nil {
-			mapURI := make([]map[string]interface{}, 0)
-			for _, a := range r.Body.ActiveDeploy.Uris {
-				m := make(map[string]interface{})
-				m["cache"] = a.Cache
-				m["path"] = a.URI
-				m["extract"] = a.Extract
-				m["executable"] = a.Executable
-				mapURI = append(mapURI, m)
+			log.Printf("[INFO] RETRY: %v, %+v", i, r)
+			if zero.IsZero(r.Body.RequestDeployState.PendingDeployState.DeployID) {
+				break
 			}
-			d.Set("uri", mapURI)
+			time.Sleep(5 * time.Second)
 		}
-		d.Set("metadata", r.Body.ActiveDeploy.Metadata)
-
-		if err = d.Set("container_info", flattenContainerInfo(r.Body.ActiveDeploy.ContainerInfo)); err != nil {
-			return fmt.Errorf("flatten docker_info from activeDeploy error: %v", err)
-		}
-		d.Set("args", r.Body.ActiveDeploy.Arguments)
 	}
+	d.Set("deploy_id", r.Body.ActiveDeploy.ID)
+	d.Set("args", r.Body.ActiveDeploy.Arguments)
+	d.Set("command", r.Body.ActiveDeploy.Command)
+	d.Set("envs", tagsFromMap(r.Body.ActiveDeploy.Env))
+
+	cpus := strconv.FormatFloat(r.Body.ActiveDeploy.Cpus, 'f', -1, 64)
+	memoryMb := strconv.FormatFloat(r.Body.ActiveDeploy.MemoryMb, 'f', -1, 64)
+
+	resources := make(map[string]string)
+	for k, v := range map[string]string{
+		"cpus":      cpus,
+		"memory_mb": memoryMb,
+	} {
+		resources[k] = v
+	}
+	d.Set("resources", resources)
+
+	if r.Body.ActiveDeploy.Uris != nil {
+		mapURI := make([]map[string]interface{}, 0)
+		for _, a := range r.Body.ActiveDeploy.Uris {
+			m := make(map[string]interface{})
+			m["cache"] = a.Cache
+			m["path"] = a.URI
+			m["extract"] = a.Extract
+			m["executable"] = a.Executable
+			mapURI = append(mapURI, m)
+		}
+		d.Set("uri", mapURI)
+	}
+	d.Set("metadata", r.Body.ActiveDeploy.Metadata)
+
+	if err = d.Set("container_info", flattenContainerInfo(r.Body.ActiveDeploy.ContainerInfo)); err != nil {
+		return fmt.Errorf("flatten docker_info from activeDeploy error: %v", err)
+	}
+	d.Set("args", r.Body.ActiveDeploy.Arguments)
+	//}
 	d.Set("request_id", r.Body.SingularityRequest.ID)
 	return nil
 }
@@ -580,20 +613,16 @@ func flattenDockerPortMapping(v singularity.DockerPortMapping) map[string]interf
 }
 
 func resourceDockerDeployUpdate(d *schema.ResourceData, m interface{}) error {
-	d.Partial(true)
 
 	if d.HasChange("request_id") ||
-		d.HasChange("deploy_id") ||
 		d.HasChange("container_info") ||
 		d.HasChange("resources") ||
 		d.HasChange("args") ||
 		d.HasChange("command") ||
 		d.HasChange("envs") ||
-		d.HasChange("metadata") ||
 		d.HasChange("uri") {
-		log.Printf("[TRACE] Create new deploy with request id (%s) success", d.Id())
-		d.Partial(false)
-		// Singularity deploy is by design idempotent.
+		log.Printf("[INFO] Create new deploy with request id (%s): ***** %+v success", d.Id(), d)
+		// Singularity deploy is by design to be idempotent.
 		return createDockerDeploy(d, m)
 	}
 	return nil

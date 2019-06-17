@@ -20,8 +20,8 @@ func TestAccSingularityDockerDeployCreateDefault(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigDefault,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foo"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foo", "deploy_id", "mydeploy"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foo", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foo", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -50,8 +50,8 @@ func TestAccSingularityDockerDeployCreateMaxOffer(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigMaxTasks,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.bar"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.bar", "deploy_id", "mydeploybar"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.bar", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.bar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -87,8 +87,8 @@ func TestAccSingularityDockerDeployCreatePortMapping(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigPortMapping,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobar"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobar", "deploy_id", "mydeployfoobar330c"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foobar", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobar", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -124,8 +124,8 @@ func TestAccSingularityDockerDeployCreateVolumes(t *testing.T) {
 				Config: testAccCheckSingularityDeployDockerConfigVolumes,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSingularityRequestExists("singularity_deploy.foobaz"),
-					resource.TestCheckResourceAttr(
-						"singularity_docker_deploy.foobaz", "deploy_id", "mydeployfoobazz2"),
+					resource.TestCheckResourceAttrSet(
+						"singularity_docker_deploy.foobaz", "deploy_id"),
 					resource.TestCheckResourceAttr(
 						"singularity_docker_deploy.foobaz", "container_info.0.docker_info.#", "1"),
 					resource.TestCheckResourceAttr(
@@ -160,7 +160,6 @@ resource "singularity_request" "foo" {
   schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "foo" {
-  deploy_id        = "mydeploy"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.foo.id}"
@@ -172,7 +171,7 @@ resource "singularity_docker_deploy" "foo" {
       image            = "ubuntu"
     }
   }
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -187,7 +186,6 @@ resource "singularity_request" "bar" {
   schedule_type          = "CRON"
 }
 resource "singularity_docker_deploy" "bar" {
-  deploy_id        = "mydeploybar"
   command          = "bash"
   args             = ["-xc", "date"]
   request_id       = "${singularity_request.bar.id}"
@@ -199,12 +197,12 @@ resource "singularity_docker_deploy" "bar" {
       image            = "ubuntu"
     }
   }
-  envs {
+  envs = {
     MYENV = "test"
     NAME  = "lenfree"
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -218,7 +216,6 @@ resource "singularity_request" "foobar" {
   instances              = 2
 }
 resource "singularity_docker_deploy" "foobar" {
-  deploy_id        = "mydeployfoobar330c"
   command          = "bash"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobar.id}"
@@ -247,7 +244,7 @@ resource "singularity_docker_deploy" "foobar" {
     }
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
@@ -261,7 +258,6 @@ resource "singularity_request" "foobaz" {
   instances              = 1
 }
 resource "singularity_docker_deploy" "foobaz" {
-  deploy_id        = "mydeployfoobazz2"
   args             = ["-xc", "while true; do echo up; done"]
   request_id       = "${singularity_request.foobaz.id}"
   command          = "bash"
@@ -274,17 +270,17 @@ resource "singularity_docker_deploy" "foobaz" {
     }
     volume {
       mode           = "RO"
-      container_path = "/root/.aws/config"
-      host_path      = "/root/.aws/config"
+      container_path = "/tmp/config"
+      host_path      = "/tmp/config"
     }
     volume {
       mode           = "RO"
-      container_path = "/root/.aws/credentials"
-      host_path      = "/root/.aws/credentials"
+      container_path = "/tmp/file"
+      host_path      = "/tmp/file"
     }
   }
 
-  resources {
+  resources = {
     cpus      = 2
     memory_mb = 128
   }
