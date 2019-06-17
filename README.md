@@ -13,18 +13,20 @@ A terraform provider to manage Mesos hubspot/Singularity objects.
 Download this provider, pick a version you'd like from releases from
 [Binary Releases](https://github.com/packetloop/terraform-provider-singularity/releases)
 
+Terraform version >= 0.12 is required.
+
 ```bash
 curl -L \
-  https://github.com/packetloop/terraform-provider-singularity/releases/download/v0.1.0/terraform-provider-singularity_v0.1.0_Darwin_x86_64 \
-  -o ~/.terraform.d/plugins/terraform-provider-singularity_v0.1.0 && \
-  chmod +x ~/.terraform.d/plugins/terraform-provider-singularity_v0.1.0
+  https://github.com/packetloop/terraform-provider-singularity/releases/download/v1.0.0/terraform-provider-singularity_v1.0.0_Darwin_x86_64 \
+  -o ~/.terraform.d/plugins/terraform-provider-singularity_v1.0.0 && \
+  chmod +x ~/.terraform.d/plugins/terraform-provider-singularity_v1.0.0
 ```
 
 ```bash
 provider "singularity" {
   host    = "localhost"
   port    = 443
-  version = "~> 0.1.0"
+  version = "~> 1.0.0"
 }
 
 resource "singularity_request" "lenfree-demand" {
