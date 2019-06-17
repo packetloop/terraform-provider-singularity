@@ -38,7 +38,7 @@ create-tag: next-tag
 	 git push packetloop v$(TAG)
 
 .PHONY: release
-release: dep
+release:
 	goreleaser
 
 .PHONY: next-tag
