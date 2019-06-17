@@ -15,9 +15,10 @@ builds:
     - goos: linux
       goarch: arm
       goarm: 7
-archive:
-  name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  format: binary
+archives:
+  - id: terraform-provider-singularity
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: binary
 checksum:
   name_template: 'checksums.txt'
 snapshot:
