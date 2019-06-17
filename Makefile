@@ -39,9 +39,7 @@ create-tag: next-tag
 
 .PHONY: release
 release:
-	unset GO111MODULE && go get github.com/google/go-github/github \
-		go get github.com/goreleaser/goreleaser && \
-		goreleaser
+	unset GO111MODULE && curl -sL https://git.io/goreleaser | bash
 
 .PHONY: next-tag
 next-tag:
