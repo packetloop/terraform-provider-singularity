@@ -32,3 +32,4 @@ changelog:
 release:
   name_template: "{{ .ProjectName }}_v{{ .Version }}"
   prerelease: true
+  disable: false
